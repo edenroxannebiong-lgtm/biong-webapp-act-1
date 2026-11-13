@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div>
             <h1 className="font-bold text-lg text-white tracking-tight flex items-center gap-1.5">
-              ClientVault
+              CVault
             </h1>
             <p className="text-xs text-[#94A3B8] font-medium">Client File Portal</p>
           </div>

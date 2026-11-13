@@ -148,7 +148,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               <UploadCloud className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[#0F172A]">Upload to ClientVault</h3>
+              <h3 className="text-lg font-bold text-[#0F172A]">Upload to CVault</h3>
               <p className="text-xs text-[#64748B]">
                 Securely store and share files with your clients
               </p>

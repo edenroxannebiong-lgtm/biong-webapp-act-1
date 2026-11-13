@@ -137,7 +137,7 @@ export async function downloadFile(file: VaultFile): Promise<void> {
     downloadBlob = blob;
   } else {
     // Fallback: create a mock text/blob representation if binary wasn't cached in this browser session
-    const content = `ClientVault Document: ${file.name}\nCategory: ${file.category}\nClient: ${file.clientName || 'General'}\nUploaded by: ${file.uploadedBy}\nSize: ${file.size} bytes\n\nThis is a verified document file from ClientVault secure portal.`;
+    const content = `CVault Document: ${file.name}\nCategory: ${file.category}\nClient: ${file.clientName || 'General'}\nUploaded by: ${file.uploadedBy}\nSize: ${file.size} bytes\n\nThis is a verified document file from CVault secure portal.`;
     downloadBlob = new Blob([content], { type: file.type || 'text/plain' });
   }
 

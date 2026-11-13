@@ -122,7 +122,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
                 <div>
                   <h4 className="font-semibold text-[#0F172A] text-sm">{file.name}</h4>
                   <p className="text-xs text-[#64748B] mt-0.5">
-                    Verified secure file in ClientVault encrypted container
+                    Verified secure file in CVault encrypted container
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#F1F5F9] text-[#475569] border border-[#CBD5E1]">

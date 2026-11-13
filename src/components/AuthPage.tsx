@@ -90,7 +90,7 @@ export const AuthPage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#4F46E5] to-[#6366F1] shadow-xl shadow-indigo-950/40 text-white mb-4">
             <Shield className="w-8 h-8 stroke-[2.2]" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">ClientVault</h1>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">CVault</h1>
           <p className="text-sm text-[#94A3B8] mt-1.5 font-medium">
             The secure client file portal for designers & freelancers
           </p>
@@ -235,7 +235,7 @@ export const AuthPage: React.FC = () => {
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isSignUp ? 'Create an Account' : 'Sign In to ClientVault'}</span>
+                  <span>{isSignUp ? 'Create an Account' : 'Sign In to CVault'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

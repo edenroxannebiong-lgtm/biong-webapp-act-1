@@ -142,7 +142,7 @@ function Dashboard() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-slate-400 font-medium">Connecting to ClientVault...</p>
+          <p className="text-sm text-slate-400 font-medium">Connecting to CVault...</p>
         </div>
       </div>
     );
@@ -323,7 +323,7 @@ function Dashboard() {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         onUploadSuccess={() => {
-          showToast('File uploaded successfully to ClientVault!');
+          showToast('File uploaded successfully to CVault!');
         }}
         existingClients={allClients}
         initialClient={selectedClient}

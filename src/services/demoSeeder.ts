@@ -43,7 +43,7 @@ export async function seedDemoVaultFiles(userId: string, uploaderName: string): 
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.font = '16px sans-serif';
-        ctx.fillText('ClientVault • Verified Client Deliverable', 400, 280);
+        ctx.fillText('CVault • Verified Client Deliverable', 400, 280);
       }
       canvas.toBlob((b) => resolve(b || new Blob()), 'image/png');
     });
@@ -58,7 +58,7 @@ export async function seedDemoVaultFiles(userId: string, uploaderName: string): 
       category: 'design' as const,
       clientName: 'Acme Corp',
       notes: 'Approved visual identity, hex color codes, and vector iconography standards.',
-      blobContent: 'ClientVault Sample Deliverable: Acme Brand Guidelines v2.4 PDF contents.',
+      blobContent: 'CVault Sample Deliverable: Acme Brand Guidelines v2.4 PDF contents.',
     },
     {
       id: 'demo_file_hero_concept_' + userId.slice(0, 8),
@@ -79,7 +79,7 @@ export async function seedDemoVaultFiles(userId: string, uploaderName: string): 
       category: 'contract' as const,
       clientName: 'Acme Corp',
       notes: 'Executed scope of work, milestone timelines, and retainer details.',
-      blobContent: 'ClientVault Verified Legal Document: Design Services Agreement Signed.',
+      blobContent: 'CVault Verified Legal Document: Design Services Agreement Signed.',
     },
     {
       id: 'demo_file_logos_' + userId.slice(0, 8),
@@ -89,7 +89,7 @@ export async function seedDemoVaultFiles(userId: string, uploaderName: string): 
       category: 'asset' as const,
       clientName: 'Bold Horizon Media',
       notes: 'Complete logo suite with dark, light, monochrome, and favicon exports.',
-      blobContent: 'ClientVault Archive: Vector Logo Kit ZIP archive files.',
+      blobContent: 'CVault Archive: Vector Logo Kit ZIP archive files.',
     },
   ];
 
@@ -100,7 +100,7 @@ export async function seedDemoVaultFiles(userId: string, uploaderName: string): 
       blob = await generateSampleImageBlob(item.name, item.imageColor);
       previewUrl = URL.createObjectURL(blob);
     } else {
-      blob = new Blob([item.blobContent || 'ClientVault Deliverable'], { type: item.type });
+      blob = new Blob([item.blobContent || 'CVault Deliverable'], { type: item.type });
     }
 
     // Save in IndexedDB
