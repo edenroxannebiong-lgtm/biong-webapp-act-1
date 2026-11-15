@@ -1,148 +1,240 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-} from 'firebase/firestore';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { BookHeart, CheckCircle2, Flame, Menu, PenLine, X } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { db } from './firebase/config';
 import { handleFirestoreError, OperationType } from './firebase/errors';
-import { VaultFile } from './types';
-import { deleteVaultFile } from './services/storageService';
-import { seedDemoVaultFiles } from './services/demoSeeder';
-import { Sidebar } from './components/Sidebar';
-import { FileList } from './components/FileList';
-import { UploadModal } from './components/UploadModal';
-import { FilePreviewModal } from './components/FilePreviewModal';
-import { ClientsManager } from './components/ClientsManager';
-import { AuthPage } from './components/AuthPage';
+import { JournalEntry, MoodTag } from './types';
 import {
-  Menu,
-  X,
-  UploadCloud,
-  CheckCircle2,
-  FolderOpen,
-  Share2,
-  ExternalLink,
-} from 'lucide-react';
+  calculateWritingStreak,
+  deleteJournalEntry,
+  ensureStarterEntry,
+  getTodayDateString,
+  saveJournalEntry,
+  toggleEntryFavorite,
+} from './services/journalService';
+import { AuthPage } from './components/AuthPage';
+import { Sidebar } from './components/Sidebar';
+import { MoodCalendar } from './components/MoodCalendar';
+import { JournalEditor } from './components/JournalEditor';
+import { EntriesFeed } from './components/EntriesFeed';
+import { RecentEntriesCard } from './components/RecentEntriesCard';
 
 function Dashboard() {
   const { user, profile, loading: authLoading } = useAuth();
-  const [files, setFiles] = useState<VaultFile[]>([]);
-  const [filesLoading, setFilesLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'files' | 'upload' | 'clients'>('files');
-  const [selectedClient, setSelectedClient] = useState<string>('all');
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [previewFile, setPreviewFile] = useState<VaultFile | null>(null);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [entriesLoading, setEntriesLoading] = useState(true);
+  const [activeView, setActiveView] = useState<'dashboard' | 'entries'>('dashboard');
+  const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
+  const [viewedMonth, setViewedMonth] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+  const [selectedMoodFilter, setSelectedMoodFilter] = useState<'all' | MoodTag>('all');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [customClients, setCustomClients] = useState<string[]>([
-    'Acme Corp',
-    'Studio Nova',
-    'Bold Horizon Media',
-  ]);
+
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+  const seededUserRef = useRef<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
   };
 
-  // Check URL query parameters for direct client portal links
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const portalParam = params.get('portal') || params.get('client');
-    if (portalParam) {
-      setSelectedClient(portalParam);
-      if (!customClients.includes(portalParam)) {
-        setCustomClients((prev) => [...prev, portalParam]);
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
       }
-    }
+    };
   }, []);
 
-  // Subscribe to files in Firestore for current user
+  // Subscribe to the signed-in user's private journal entries
   useEffect(() => {
     if (!user) {
-      setFiles([]);
-      setFilesLoading(false);
+      setEntries([]);
+      setEntriesLoading(false);
+      seededUserRef.current = null;
       return;
     }
 
-    setFilesLoading(true);
-    const filesPath = 'files';
+    setEntriesLoading(true);
+    const entriesPath = `users/${user.uid}/entries`;
     const q = query(
-      collection(db, filesPath),
+      collection(db, 'users', user.uid, 'entries'),
       where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const loaded: VaultFile[] = [];
-        snapshot.forEach((doc) => {
-          loaded.push({ ...doc.data() as VaultFile, id: doc.id });
+        const loaded: JournalEntry[] = [];
+        snapshot.forEach((docSnap) => {
+          loaded.push({ ...(docSnap.data() as JournalEntry), id: docSnap.id });
         });
-        setFiles(loaded);
-        setFilesLoading(false);
+        setEntries(loaded);
+        setEntriesLoading(false);
       },
       (error) => {
-        console.error('Error fetching files:', error);
-        setFilesLoading(false);
-        handleFirestoreError(error, OperationType.LIST, filesPath);
+        console.error('Error loading journal entries:', error);
+        setEntriesLoading(false);
+        handleFirestoreError(error, OperationType.LIST, entriesPath);
       }
     );
 
     return () => unsubscribe();
   }, [user]);
 
-  // Aggregate all unique client names from files & custom clients
-  const allClients = useMemo(() => {
-    const fromFiles = files.map((f) => f.clientName).filter(Boolean) as string[];
-    const merged = Array.from(new Set([...customClients, ...fromFiles]));
-    return merged.sort();
-  }, [files, customClients]);
+  // Seed a welcoming starter entry once for brand-new accounts
+  useEffect(() => {
+    if (!user || !profile) return;
+    if (profile.starterSeeded) return;
+    if (seededUserRef.current === user.uid) return;
 
-  // Calculate total storage bytes utilized
-  const totalStorageBytes = useMemo(() => {
-    return files.reduce((acc, f) => acc + (f.size || 0), 0);
-  }, [files]);
+    seededUserRef.current = user.uid;
+    ensureStarterEntry(
+      user.uid,
+      profile.displayName || user.displayName || 'Journaler'
+    ).catch((err) => {
+      console.warn('Starter entry seeding skipped:', err);
+    });
+  }, [user, profile]);
 
-  const handleDeleteFile = async (fileId: string) => {
-    try {
-      await deleteVaultFile(fileId);
-      showToast('File securely deleted from vault.');
-    } catch (err: any) {
-      console.error('Delete failed:', err);
-      showToast('Error deleting file: ' + (err.message || 'Permission denied'));
-    }
+  const entriesForSelectedDate = useMemo(() => {
+    return entries
+      .filter((entry) => entry.date === selectedDate)
+      .sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+  }, [entries, selectedDate]);
+
+  const streakCount = useMemo(() => calculateWritingStreak(entries), [entries]);
+
+  const scrollToEditor = () => {
+    mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    window.setTimeout(() => {
+      const titleInput = document.getElementById('entry-title');
+      if (titleInput instanceof HTMLInputElement) {
+        titleInput.focus();
+      }
+    }, 150);
   };
 
-  const handleSeedDemo = async () => {
+  const handleSelectDate = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    const dayEntries = entries
+      .filter((entry) => entry.date === dateStr)
+      .sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return timeB - timeA;
+      });
+    setEditingEntry(dayEntries[0] || null);
+  };
+
+  const handleWriteToday = () => {
+    const todayStr = getTodayDateString();
+    const now = new Date();
+    setActiveView('dashboard');
+    setViewedMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDate(todayStr);
+    const todayEntries = entries.filter((entry) => entry.date === todayStr);
+    setEditingEntry(todayEntries[0] || null);
+    setMobileMenuOpen(false);
+    scrollToEditor();
+  };
+
+  const handleSaveEntry = async (data: {
+    id?: string;
+    date: string;
+    title: string;
+    mood: MoodTag;
+    content: string;
+  }) => {
     if (!user) return;
-    try {
-      showToast('Populating sample deliverables...');
-      await seedDemoVaultFiles(user.uid, profile?.displayName || user.displayName || 'Designer');
-      showToast('Sample design deliverables loaded!');
-    } catch (err) {
-      console.error('Seed error:', err);
-      showToast('Could not load sample files.');
+    await saveJournalEntry(user.uid, data);
+    if (data.id) {
+      setEditingEntry(null);
+      showToast('Reflection updated.');
+    } else {
+      showToast('Reflection saved to Keepsake.');
     }
   };
 
-  const handleAddClient = (clientName: string) => {
-    if (!customClients.includes(clientName)) {
-      setCustomClients((prev) => [...prev, clientName]);
+  const handleEditEntry = (entry: JournalEntry) => {
+    setActiveView('dashboard');
+    setSelectedDate(entry.date);
+    const parts = entry.date.split('-').map(Number);
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      setViewedMonth(new Date(parts[0], parts[1] - 1, 1));
     }
-    showToast(`Client Portal "${clientName}" created!`);
+    setEditingEntry(entry);
+    scrollToEditor();
   };
+
+  const handleOpenMyEntries = () => {
+    setSelectedMoodFilter('all');
+    setShowFavoritesOnly(false);
+    setActiveView('entries');
+    mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!user) return;
+    await deleteJournalEntry(user.uid, entryId);
+    if (editingEntry?.id === entryId) {
+      setEditingEntry(null);
+    }
+    showToast('Entry deleted.');
+  };
+
+  const handleToggleFavorite = async (entry: JournalEntry) => {
+    if (!user) return;
+    const nextFav = entry.isFavorite !== true;
+    await toggleEntryFavorite(user.uid, entry.id, nextFav);
+    showToast(nextFav ? 'Added to favorites.' : 'Removed from favorites.');
+  };
+
+  const greetingInfo = useMemo(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const timeGreeting =
+      hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    const rawName = (
+      profile?.displayName ||
+      user?.displayName ||
+      user?.email?.split('@')[0] ||
+      'there'
+    ).trim();
+    const firstName = rawName.split(/\s+/)[0] || 'there';
+    const todayFormatted = now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+    return { timeGreeting, firstName, todayFormatted };
+  }, [profile?.displayName, user?.displayName, user?.email]);
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F6E6EA] flex items-center justify-center p-6">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-slate-400 font-medium">Connecting to CVault...</p>
+          <div className="w-11 h-11 rounded-2xl bg-[#7B5A66] text-white flex items-center justify-center mx-auto">
+            <BookHeart className="w-6 h-6" />
+          </div>
+          <div className="w-6 h-6 border-2 border-[#7B5A66] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-[#7B5A66] font-medium">Opening Keepsake...</p>
         </div>
       </div>
     );
@@ -153,11 +245,15 @@ function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F1F5F9] overflow-hidden text-[#0F172A] font-sans">
+    <div className="flex h-screen bg-[#F6E6EA] overflow-hidden text-[#3F2A32]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-[#0F172A] text-white px-4 py-2.5 rounded-xl shadow-xl border border-[#334155] flex items-center gap-2.5 text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-5 right-5 z-50 bg-[#3F2A32] text-[#FBF3F5] px-4 py-2.5 rounded-xl shadow-md border border-[#7B5A66] flex items-center gap-2.5 text-xs font-medium"
+        >
+          <CheckCircle2 className="w-4 h-4 text-[#F0C9D3] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -166,29 +262,39 @@ function Dashboard() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 md:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-[#3F2A32]/35 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative z-50">
+          <div className="relative z-50 flex">
             <Sidebar
-              currentView={currentView}
-              setCurrentView={(v) => {
-                setCurrentView(v);
+              activeView={activeView}
+              setActiveView={(view) => {
+                setActiveView(view);
                 setMobileMenuOpen(false);
               }}
-              totalStorageBytes={totalStorageBytes}
-              totalFilesCount={files.length}
-              onOpenUpload={() => {
-                setIsUploadOpen(true);
+              selectedMoodFilter={selectedMoodFilter}
+              setSelectedMoodFilter={(mood) => {
+                setSelectedMoodFilter(mood);
                 setMobileMenuOpen(false);
               }}
-              selectedClient={selectedClient}
-              setSelectedClient={(c) => {
-                setSelectedClient(c);
+              showFavoritesOnly={showFavoritesOnly}
+              setShowFavoritesOnly={(show) => {
+                setShowFavoritesOnly(show);
                 setMobileMenuOpen(false);
               }}
-              clients={allClients}
+              entries={entries}
+              streakCount={streakCount}
+              viewedMonth={viewedMonth}
+              onWriteToday={handleWriteToday}
             />
+            <button
+              type="button"
+              aria-label="Close navigation menu"
+              onClick={() => setMobileMenuOpen(false)}
+              className="m-3 p-2 h-9 w-9 rounded-xl bg-[#FBF3F5] border border-[#F0C9D3] text-[#3F2A32] flex items-center justify-center cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -196,144 +302,161 @@ function Dashboard() {
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <Sidebar
-          currentView={currentView}
-          setCurrentView={setCurrentView}
-          totalStorageBytes={totalStorageBytes}
-          totalFilesCount={files.length}
-          onOpenUpload={() => setIsUploadOpen(true)}
-          selectedClient={selectedClient}
-          setSelectedClient={setSelectedClient}
-          clients={allClients}
+          activeView={activeView}
+          setActiveView={setActiveView}
+          selectedMoodFilter={selectedMoodFilter}
+          setSelectedMoodFilter={setSelectedMoodFilter}
+          showFavoritesOnly={showFavoritesOnly}
+          setShowFavoritesOnly={setShowFavoritesOnly}
+          entries={entries}
+          streakCount={streakCount}
+          viewedMonth={viewedMonth}
+          onWriteToday={handleWriteToday}
         />
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-[#CBD5E1] px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+        {/* Top Header */}
+        <header className="h-16 bg-[#FBF3F5] border-b border-[#F0C9D3] px-5 sm:px-8 flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <button
+              type="button"
+              aria-label="Open navigation menu"
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg cursor-pointer"
+              className="md:hidden p-2 text-[#7B5A66] hover:text-[#3F2A32] hover:bg-[#F6E6EA] rounded-lg cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B]">
-              <span className="text-[#94A3B8]">Portal</span>
-              <span>/</span>
-              <span className="text-[#0F172A] font-semibold capitalize">
-                {currentView === 'files'
-                  ? selectedClient === 'all'
-                    ? 'All Files'
-                    : selectedClient
-                  : 'Clients & Portals'}
+
+            <div className="flex items-center gap-2 text-xs font-medium text-[#7B5A66] truncate">
+              <span>Keepsake</span>
+              <span aria-hidden="true">/</span>
+              <span className="text-[#3F2A32] font-semibold">
+                {activeView === 'dashboard' ? 'Dashboard' : 'My Entries'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {selectedClient !== 'all' && (
-              <button
-                onClick={() => {
-                  setSelectedClient('all');
-                  setCurrentView('files');
-                }}
-                className="text-xs text-[#475569] hover:text-[#334155] bg-white px-2.5 py-1.5 rounded-lg border border-[#CBD5E1] font-medium transition-colors cursor-pointer"
-              >
-                Clear Client Filter
-              </button>
-            )}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-[#7B5A66] bg-[#F6E6EA] border border-[#F0C9D3] px-3 py-1.5 rounded-lg tabular-nums">
+              <Flame className="w-3.5 h-3.5 text-[#7B5A66]" />
+              <span>{streakCount} day streak</span>
+            </div>
 
             <button
-              onClick={() => setIsUploadOpen(true)}
-              className="px-3.5 py-1.5 text-xs font-medium text-white bg-[#475569] hover:bg-[#334155] rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              type="button"
+              onClick={handleWriteToday}
+              className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#7B5A66] hover:bg-[#654752] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              <UploadCloud className="w-3.5 h-3.5" />
-              <span>Upload</span>
+              <PenLine className="w-3.5 h-3.5" />
+              <span>Write Today</span>
             </button>
           </div>
         </header>
 
-        {/* Client Portal Mode Header Banner if viewing specific client */}
-        {selectedClient !== 'all' && (
-          <div className="bg-[#1E293B] text-white px-6 py-2.5 text-xs flex items-center justify-between shadow-xs border-b border-[#334155]">
-            <div className="flex items-center gap-2">
-              <FolderOpen className="w-4 h-4 text-[#94A3B8]" />
-              <span>
-                Active Client Portal:{' '}
-                <strong className="text-white">{selectedClient}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}?portal=${encodeURIComponent(
-                    selectedClient
-                  )}`;
-                  navigator.clipboard.writeText(url);
-                  showToast('Client link copied to clipboard!');
-                }}
-                className="text-[#CBD5E1] hover:text-white underline cursor-pointer"
-              >
-                Copy Client Upload Link
-              </button>
-              <button
-                onClick={() => setSelectedClient('all')}
-                className="text-[#94A3B8] hover:text-white cursor-pointer"
-              >
-                View All Files
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Mobile Page Switcher Tabs */}
+        <nav
+          aria-label="Mobile page navigation"
+          className="md:hidden bg-[#FBF3F5] border-b border-[#F0C9D3] px-5 py-2 flex items-center gap-2 shrink-0"
+        >
+          <button
+            type="button"
+            onClick={() => setActiveView('dashboard')}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-center transition-colors cursor-pointer whitespace-nowrap ${
+              activeView === 'dashboard'
+                ? 'bg-[#7B5A66] text-white'
+                : 'bg-[#F6E6EA] text-[#7B5A66] border border-[#F0C9D3]'
+            }`}
+          >
+            Dashboard
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView('entries')}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-center transition-colors cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 ${
+              activeView === 'entries'
+                ? 'bg-[#7B5A66] text-white'
+                : 'bg-[#F6E6EA] text-[#7B5A66] border border-[#F0C9D3]'
+            }`}
+          >
+            <span>My Entries</span>
+            <span
+              className={`tabular-nums ${
+                activeView === 'entries' ? 'text-white/85' : 'text-[#7B5A66]'
+              }`}
+            >
+              ({entries.length})
+            </span>
+          </button>
+        </nav>
 
-        {/* View Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-7xl mx-auto">
-            {currentView === 'files' ? (
-              <FileList
-                files={files}
-                onDeleteFile={handleDeleteFile}
-                onPreviewFile={(file) => setPreviewFile(file)}
-                onOpenUpload={() => setIsUploadOpen(true)}
-                onSeedDemoFiles={handleSeedDemo}
-                selectedClient={selectedClient}
-              />
+        {/* Scrollable Workspace */}
+        <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-5 sm:p-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+            {activeView === 'dashboard' ? (
+              <>
+                {/* Friendly Greeting */}
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+                  <div>
+                    <h1 className="font-display text-2xl sm:text-3xl font-semibold text-[#3F2A32] tracking-tight">
+                      {greetingInfo.timeGreeting}, {greetingInfo.firstName}
+                    </h1>
+                    <p className="text-sm text-[#7B5A66] mt-1">
+                      {greetingInfo.todayFormatted} · Take a quiet moment to check in with yourself.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Calendar & Journal Editor Split */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                  <div className="lg:col-span-5">
+                    <MoodCalendar
+                      viewedMonth={viewedMonth}
+                      setViewedMonth={setViewedMonth}
+                      selectedDate={selectedDate}
+                      onSelectDate={handleSelectDate}
+                      entries={entries}
+                    />
+                  </div>
+                  <div className="lg:col-span-7">
+                    <JournalEditor
+                      selectedDate={selectedDate}
+                      entriesForSelectedDate={entriesForSelectedDate}
+                      editingEntry={editingEntry}
+                      onSelectEntryToEdit={(entry) => setEditingEntry(entry)}
+                      onStartNewEntry={() => setEditingEntry(null)}
+                      onSaveEntry={handleSaveEntry}
+                      onCancelEdit={() => setEditingEntry(null)}
+                    />
+                  </div>
+                </div>
+
+                {/* Recent Entries Card (Last 3) */}
+                <RecentEntriesCard
+                  entries={entries}
+                  loading={entriesLoading}
+                  onViewAll={handleOpenMyEntries}
+                  onSelectEntry={handleEditEntry}
+                />
+              </>
             ) : (
-              <ClientsManager
-                files={files}
-                clients={allClients}
-                onSelectClient={(client) => {
-                  setSelectedClient(client);
-                  setCurrentView('files');
-                }}
-                onAddClient={handleAddClient}
-                onOpenUploadForClient={(client) => {
-                  setSelectedClient(client);
-                  setIsUploadOpen(true);
-                }}
+              <EntriesFeed
+                entries={entries}
+                loading={entriesLoading}
+                selectedMoodFilter={selectedMoodFilter}
+                setSelectedMoodFilter={setSelectedMoodFilter}
+                showFavoritesOnly={showFavoritesOnly}
+                setShowFavoritesOnly={setShowFavoritesOnly}
+                onToggleFavorite={handleToggleFavorite}
+                onEditEntry={handleEditEntry}
+                onDeleteEntry={handleDeleteEntry}
+                onFocusEditor={handleWriteToday}
               />
             )}
           </div>
         </main>
       </div>
-
-      {/* Upload Modal */}
-      <UploadModal
-        isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
-        onUploadSuccess={() => {
-          showToast('File uploaded successfully to CVault!');
-        }}
-        existingClients={allClients}
-        initialClient={selectedClient}
-      />
-
-      {/* File Preview Modal */}
-      <FilePreviewModal
-        file={previewFile}
-        onClose={() => setPreviewFile(null)}
-      />
     </div>
   );
 }

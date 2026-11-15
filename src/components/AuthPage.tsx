@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
-import {
-  Shield,
-  Lock,
-  Mail,
-  User as UserIcon,
-  Briefcase,
-  ArrowRight,
-  AlertCircle,
-  Sparkles,
-  CheckCircle2,
-} from 'lucide-react';
+import { BookHeart, Lock, Mail, User as UserIcon, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from '../types';
 
 export const AuthPage: React.FC = () => {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
@@ -19,7 +8,6 @@ export const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [role, setRole] = useState<UserRole>('freelancer');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,26 +19,30 @@ export const AuthPage: React.FC = () => {
     try {
       if (isSignUp) {
         if (!displayName.trim()) {
-          setError('Please provide your name or company name.');
+          setError('Please enter your name so we can personalize your journal.');
           setLoading(false);
           return;
         }
-        await signUpWithEmail(email, password, displayName, role);
+        await signUpWithEmail(email, password, displayName);
       } else {
         await signInWithEmail(email, password);
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      let msg = err.message || 'Authentication failed. Please verify your credentials.';
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        msg = 'Invalid email or password. Please double-check your credentials.';
+      let msg = err.message || 'Could not sign you in. Please check your details.';
+      if (
+        err.code === 'auth/invalid-credential' ||
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/user-not-found'
+      ) {
+        msg = 'The email or password you entered does not match our records.';
       } else if (err.code === 'auth/email-already-in-use') {
         msg = 'An account with this email already exists. Try signing in instead.';
       } else if (err.code === 'auth/weak-password') {
-        msg = 'Password should be at least 6 characters long.';
+        msg = 'Please choose a password with at least 6 characters.';
       } else if (err.code === 'auth/operation-not-allowed') {
         msg =
-          'Email/Password provider is currently not enabled in Firebase Console. Please click "Continue with Google" or use Quick Demo Sign-In.';
+          'Email/Password sign-in needs to be enabled in your Firebase Authentication console, or you can use Continue with Google below.';
       }
       setError(msg);
     } finally {
@@ -71,45 +63,36 @@ export const AuthPage: React.FC = () => {
     }
   };
 
-  const fillDemoAccount = (demoRole: UserRole) => {
-    setIsSignUp(false);
-    if (demoRole === 'freelancer') {
-      setEmail('designer@clientvault.app');
-      setPassword('DesignVault2026!');
-    } else {
-      setEmail('client@acmecorp.com');
-      setPassword('ClientVault2026!');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 selection:bg-[#4F46E5] selection:text-white">
+    <div className="min-h-screen bg-[#F6E6EA] flex items-center justify-center p-6 selection:bg-[#7B5A66] selection:text-white">
       <div className="w-full max-w-md">
-        {/* App Logo & Header */}
+        {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#4F46E5] to-[#6366F1] shadow-xl shadow-indigo-950/40 text-white mb-4">
-            <Shield className="w-8 h-8 stroke-[2.2]" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#7B5A66] text-white shadow-sm mb-4">
+            <BookHeart className="w-7 h-7 stroke-[2]" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">CVault</h1>
-          <p className="text-sm text-[#94A3B8] mt-1.5 font-medium">
-            The secure client file portal for designers & freelancers
+          <h1 className="font-display text-3xl font-semibold text-[#3F2A32] tracking-tight">
+            Keepsake
+          </h1>
+          <p className="text-sm text-[#7B5A66] mt-1.5">
+            A quiet daily diary for your thoughts and reflections
           </p>
         </div>
 
-        {/* Card Container */}
-        <div className="bg-[#1E293B] rounded-2xl shadow-2xl border border-[#334155] overflow-hidden p-7 sm:p-8">
-          {/* Tab Switcher */}
-          <div className="flex bg-[#0F172A] p-1 rounded-xl mb-6 text-sm font-medium border border-[#334155]/60">
+        {/* Auth Card */}
+        <div className="bg-[#FBF3F5] rounded-2xl border border-[#F0C9D3] p-7 sm:p-8 shadow-sm">
+          {/* Segmented Switcher */}
+          <div className="flex bg-[#F6E6EA] p-1 rounded-xl mb-6 text-sm font-medium border border-[#F0C9D3]">
             <button
               type="button"
               onClick={() => {
                 setIsSignUp(false);
                 setError(null);
               }}
-              className={`flex-1 py-2 text-center rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-center rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                 !isSignUp
-                  ? 'bg-[#1E293B] text-white shadow-sm font-semibold border border-[#334155]'
-                  : 'text-[#94A3B8] hover:text-white'
+                  ? 'bg-[#FBF3F5] text-[#3F2A32] font-semibold shadow-xs'
+                  : 'text-[#7B5A66] hover:text-[#3F2A32]'
               }`}
             >
               Sign In
@@ -120,10 +103,10 @@ export const AuthPage: React.FC = () => {
                 setIsSignUp(true);
                 setError(null);
               }}
-              className={`flex-1 py-2 text-center rounded-lg transition-all cursor-pointer ${
+              className={`flex-1 py-2 text-center rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                 isSignUp
-                  ? 'bg-[#1E293B] text-white shadow-sm font-semibold border border-[#334155]'
-                  : 'text-[#94A3B8] hover:text-white'
+                  ? 'bg-[#FBF3F5] text-[#3F2A32] font-semibold shadow-xs'
+                  : 'text-[#7B5A66] hover:text-[#3F2A32]'
               }`}
             >
               Create an Account
@@ -131,111 +114,94 @@ export const AuthPage: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 text-xs text-red-300 flex items-start gap-2.5">
+            <div className="mb-5 p-3.5 rounded-xl bg-[#FCE8EC] border border-[#E0A0B2] text-xs text-[#7E2738] flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="flex-1">{error}</div>
+              <div className="flex-1 leading-relaxed">{error}</div>
             </div>
           )}
 
-          {/* Email / Password Form */}
+          {/* Email & Password Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-[#94A3B8] mb-1.5">
-                    Your Name or Studio Name
-                  </label>
-                  <div className="relative">
-                    <UserIcon className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="e.g. Sarah Jenkins or Nova Design Lab"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-[#334155] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-[#4F46E5] bg-[#1E293B] text-white placeholder-[#94A3B8]/60"
-                      required
-                    />
-                  </div>
+              <div>
+                <label
+                  htmlFor="auth-name"
+                  className="block text-xs font-semibold text-[#3F2A32] mb-1.5"
+                >
+                  Your Name
+                </label>
+                <div className="relative">
+                  <UserIcon className="w-4 h-4 text-[#7B5A66] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="auth-name"
+                    type="text"
+                    placeholder="e.g. Clara Bennett"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    maxLength={100}
+                    className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-[#F0C9D3] focus:outline-none focus:ring-2 focus:ring-[#7B5A66] focus:border-[#7B5A66] bg-white text-[#3F2A32] placeholder-[#7B5A66]/60"
+                    required
+                  />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#94A3B8] mb-1.5">
-                    I am joining as:
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setRole('freelancer')}
-                      className={`p-2.5 rounded-xl border text-center font-medium transition-all cursor-pointer ${
-                        role === 'freelancer'
-                          ? 'border-[#4F46E5] bg-[#4F46E5]/20 text-white ring-1 ring-[#4F46E5] font-semibold'
-                          : 'border-[#334155] bg-[#1E293B] text-[#94A3B8] hover:bg-[#334155]/40 hover:text-white'
-                      }`}
-                    >
-                      Freelancer / Designer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('client')}
-                      className={`p-2.5 rounded-xl border text-center font-medium transition-all cursor-pointer ${
-                        role === 'client'
-                          ? 'border-[#4F46E5] bg-[#4F46E5]/20 text-white ring-1 ring-[#4F46E5] font-semibold'
-                          : 'border-[#334155] bg-[#1E293B] text-[#94A3B8] hover:bg-[#334155]/40 hover:text-white'
-                      }`}
-                    >
-                      Client / Organization
-                    </button>
-                  </div>
-                </div>
-              </>
+              </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-[#94A3B8] mb-1.5">
+              <label
+                htmlFor="auth-email"
+                className="block text-xs font-semibold text-[#3F2A32] mb-1.5"
+              >
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-[#7B5A66] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-email"
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-[#334155] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-[#4F46E5] bg-[#1E293B] text-white placeholder-[#94A3B8]/60"
+                  className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-[#F0C9D3] focus:outline-none focus:ring-2 focus:ring-[#7B5A66] focus:border-[#7B5A66] bg-white text-[#3F2A32] placeholder-[#7B5A66]/60"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#94A3B8] mb-1.5">Password</label>
+              <label
+                htmlFor="auth-password"
+                className="block text-xs font-semibold text-[#3F2A32] mb-1.5"
+              >
+                Password
+              </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[#7B5A66] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
+                  id="auth-password"
                   type="password"
-                  placeholder="••••••••••••"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-[#334155] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-[#4F46E5] bg-[#1E293B] text-white placeholder-[#94A3B8]/60"
+                  className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-[#F0C9D3] focus:outline-none focus:ring-2 focus:ring-[#7B5A66] focus:border-[#7B5A66] bg-white text-[#3F2A32] placeholder-[#7B5A66]/60"
                   minLength={6}
                   required
                 />
               </div>
               {isSignUp && (
-                <p className="text-[11px] text-[#94A3B8] mt-1">Must be at least 6 characters</p>
+                <p className="text-xs text-[#7B5A66] mt-1.5">Must be at least 6 characters</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold text-sm transition-all shadow-md shadow-indigo-950/50 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+              className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#7B5A66] hover:bg-[#654752] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B5A66]"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isSignUp ? 'Create an Account' : 'Sign In to CVault'}</span>
+                  <span>{isSignUp ? 'Create an Account' : 'Sign In'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -245,21 +211,23 @@ export const AuthPage: React.FC = () => {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#334155]" />
+              <div className="w-full border-t border-[#F0C9D3]" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wider">
-              <span className="bg-[#1E293B] px-3 text-[#94A3B8] font-semibold">Or continue with</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-[#FBF3F5] px-3 text-[#7B5A66] font-medium">
+                or continue with
+              </span>
             </div>
           </div>
 
-          {/* Google Sign-in */}
+          {/* Google Sign-In */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-xl bg-[#1E293B] hover:bg-[#334155]/50 border border-[#334155] text-white font-medium text-sm transition-all flex items-center justify-center gap-3 shadow-xs cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-[#F6E6EA]/60 border border-[#E0A0B2] text-[#3F2A32] font-medium text-sm transition-colors flex items-center justify-center gap-3 cursor-pointer"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -279,37 +247,12 @@ export const AuthPage: React.FC = () => {
             </svg>
             <span>Continue with Google</span>
           </button>
-
-          {/* Quick Demo Credentials Footer */}
-          <div className="mt-6 pt-5 border-t border-[#334155] text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] mb-2 flex items-center justify-center gap-1">
-              <Sparkles className="w-3 h-3 text-[#4F46E5]" /> Quick Demo Accounts
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('freelancer')}
-                className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline px-2.5 py-1 rounded-lg bg-[#0F172A] border border-[#334155] cursor-pointer font-medium"
-              >
-                Freelancer Demo
-              </button>
-              <span className="text-[#334155]">•</span>
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('client')}
-                className="text-xs text-[#94A3B8] hover:text-white hover:underline px-2.5 py-1 rounded-lg bg-[#0F172A] border border-[#334155] cursor-pointer font-medium"
-              >
-                Client Demo
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* Security Trust Badge */}
-        <div className="text-center mt-6 text-xs text-[#94A3B8] flex items-center justify-center gap-2">
-          <Shield className="w-3.5 h-3.5 text-[#4F46E5]" />
-          <span>AES-256 encrypted storage & private user data isolation</span>
-        </div>
+        {/* Quiet Footer Note */}
+        <p className="text-center mt-6 text-xs text-[#7B5A66]">
+          Your reflections are private and saved securely to your account.
+        </p>
       </div>
     </div>
   );

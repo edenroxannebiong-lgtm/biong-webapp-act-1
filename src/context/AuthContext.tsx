@@ -11,17 +11,16 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { UserProfile, UserRole } from '../types';
+import { UserProfile } from '../types';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, displayName: string, role: UserRole) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
-  switchRole: (newRole: UserRole) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +30,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Sync profile when auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -42,12 +40,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (snap.exists()) {
             setProfile(snap.data() as UserProfile);
           } else {
-            // First time login (e.g. Google auth): create default freelancer profile
             const newProfile: UserProfile = {
               id: currentUser.uid,
-              email: currentUser.email || '',
-              displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-              role: 'freelancer',
+              email: (currentUser.email || '').slice(0, 150),
+              displayName: (
+                currentUser.displayName ||
+                currentUser.email?.split('@')[0] ||
+                'Journaler'
+              ).slice(0, 100),
+              starterSeeded: false,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             };
@@ -55,13 +56,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProfile(newProfile);
           }
         } catch (err) {
-          console.warn('Could not fetch user profile:', err);
-          // Fallback profile if Firestore rules/network is warming up
+          console.warn('Could not load user profile:', err);
           setProfile({
             id: currentUser.uid,
             email: currentUser.email || '',
-            displayName: currentUser.displayName || 'User',
-            role: 'freelancer',
+            displayName: currentUser.displayName || 'Journaler',
+            starterSeeded: false,
             createdAt: new Date(),
             updatedAt: new Date(),
           });
@@ -84,22 +84,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUpWithEmail = async (
-    email: string,
-    pass: string,
-    displayName: string,
-    role: UserRole
-  ) => {
+  const signUpWithEmail = async (email: string, pass: string, displayName: string) => {
     setLoading(true);
     try {
+      const cleanName = displayName.trim().slice(0, 100);
       const res = await createUserWithEmailAndPassword(auth, email, pass);
       if (res.user) {
-        await updateProfile(res.user, { displayName });
+        await updateProfile(res.user, { displayName: cleanName });
         const newProfile: UserProfile = {
           id: res.user.uid,
-          email: res.user.email || email,
-          displayName,
-          role,
+          email: (res.user.email || email).slice(0, 150),
+          displayName: cleanName,
+          starterSeeded: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -133,24 +129,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const switchRole = async (newRole: UserRole) => {
-    if (!user) return;
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(
-        userDocRef,
-        {
-          role: newRole,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-      setProfile((prev) => (prev ? { ...prev, role: newRole } : null));
-    } catch (err) {
-      console.warn('Failed to switch role:', err);
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -161,7 +139,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUpWithEmail,
         signInWithGoogle,
         signOutUser,
-        switchRole,
       }}
     >
       {children}

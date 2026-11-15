@@ -1,22 +1,22 @@
-# ClientVault Security Specification & Invariants
+# Keepsake Security Specification & Invariants
 
 ## 1. Data Invariants
-- **Strict Owner Isolation**: A user can only create, read, query, update, or delete files and client records that belong to their own authenticated UID (`userId == request.auth.uid`).
-- **User Document Pinning**: A user document at `/users/{userId}` can only be read or written if `{userId} == request.auth.uid`. Cross-user inspection of profiles or PII is strictly forbidden.
-- **Identity Integrity**: Incoming `userId` on creation must match `request.auth.uid`. Identity fields (`userId`, `id`, `createdAt`) are immutable after creation.
-- **Payload Validation**: All text fields have length limits (file name <= 255 chars, notes <= 500 chars). Numbers like `size` and `downloadCount` cannot be negative.
-- **Atomic Timestamps**: `createdAt` on create must equal `request.time`. `updatedAt` on create and update must equal `request.time`.
+- **Strict Owner Isolation**: Every journal entry is stored under `/users/{userId}/entries/{entryId}`. Only the authenticated owner (`request.auth.uid == userId`) can read, list, create, update, or delete their own entries.
+- **User Document Pinning**: A user document at `/users/{userId}` can only be read or modified by that exact authenticated user (`request.auth.uid == userId`). Listing `/users` is strictly disabled to protect PII.
+- **Identity & Parent Integrity**: On creation, `incoming().userId` must match `{userId}` and `incoming().id` must match `{entryId}`. Both fields are immutable on updates.
+- **Strict Schema & Bounds**: `title` (1..150 chars), `content` (1..10000 chars), `date` (`YYYY-MM-DD`), and `mood` (`Happy`, `Productive`, `Stressed`, `Chill`) are strictly validated on both create and update.
+- **Temporal Integrity**: `createdAt` must equal `request.time` on creation and remain immutable thereafter. `updatedAt` must equal `request.time` on creation and update.
 
-## 2. The Dirty Dozen Payloads (Designed to Fail with PERMISSION_DENIED)
-1. **Unauthenticated Read on Files**: Anonymous/unauthenticated `GET /files/{fileId}` -> PERMISSION_DENIED.
-2. **Cross-User File Access**: User A attempts `GET /files/{fileB_id}` where `fileB.userId == 'user_b'` -> PERMISSION_DENIED.
-3. **Identity Spoofing on File Create**: User A attempts to write `{ id: 'f1', userId: 'user_b', name: 'hack.pdf' }` -> PERMISSION_DENIED.
-4. **Blanket Query Scraping**: User attempts `allow list` without filtering by `userId == request.auth.uid` -> PERMISSION_DENIED.
-5. **Ghost Field Injection**: Adding unauthorized field `{ isSuperAdmin: true }` on update -> PERMISSION_DENIED.
-6. **Path Traversal / Malformed Document ID**: Using oversized or special characters in document ID -> PERMISSION_DENIED.
-7. **Negative File Size**: Attempting to set `size: -5000` -> PERMISSION_DENIED.
-8. **Tampering with Immutable Timestamps**: Updating `createdAt` timestamp on an existing file -> PERMISSION_DENIED.
-9. **Stealing Client Records**: User A attempting to read/update User B's `/clients/{clientId}` -> PERMISSION_DENIED.
-10. **Client Record with Spoofed userId**: Creating client record with mismatched `userId` -> PERMISSION_DENIED.
-11. **Client Profile Hijacking**: Updating another user's profile at `/users/{otherUid}` -> PERMISSION_DENIED.
-12. **Role Escalation**: Client attempting to self-promote to admin or overwrite immutable profile fields -> PERMISSION_DENIED.
+## 2. The Dirty Dozen Payloads (Must Fail with PERMISSION_DENIED)
+1. **Unauthenticated Entry Read**: Anonymous `GET /users/u1/entries/e1` -> PERMISSION_DENIED.
+2. **Cross-User Entry Read**: User A reads `/users/user_b/entries/e1` -> PERMISSION_DENIED.
+3. **Cross-User Entry List**: User A queries `collection(db, 'users', 'user_b', 'entries')` -> PERMISSION_DENIED.
+4. **Blanket Query Without Owner Filter**: User A queries `entries` without `where('userId', '==', auth.uid)` -> PERMISSION_DENIED.
+5. **Identity Spoofing on Entry Create**: User A writes `{ id: 'e1', userId: 'user_b', ... }` under `/users/user_a/entries/e1` -> PERMISSION_DENIED.
+6. **Ghost Field Injection**: Adding `{ isAdmin: true }` or `{ extraField: 'x' }` to a journal entry or profile -> PERMISSION_DENIED.
+7. **Invalid Mood Tag**: Creating or updating an entry with `mood: 'Angry'` -> PERMISSION_DENIED.
+8. **Malformed Date String**: Creating an entry with `date: '14-11-2026'` or `'invalid'` -> PERMISSION_DENIED.
+9. **Empty or Oversized Content**: Submitting `content: ''` or `title: ''` or `content > 10000 chars` -> PERMISSION_DENIED.
+10. **Tampering with Immutable Timestamps**: Modifying `createdAt` during an entry update -> PERMISSION_DENIED.
+11. **User Profile Listing**: Any user querying `collection(db, 'users')` -> PERMISSION_DENIED.
+12. **Client-Forged Future Timestamp**: Setting `updatedAt` to a client-chosen date instead of `request.time` -> PERMISSION_DENIED.

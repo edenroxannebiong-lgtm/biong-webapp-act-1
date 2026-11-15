@@ -2,27 +2,27 @@
   "entities": {
     "UserProfile": {
       "title": "UserProfile",
-      "description": "User account profile for freelancer or client",
+      "description": "Private user account profile for Keepsake",
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "User ID matching auth UID"
+          "description": "User ID matching Firebase Auth UID"
         },
         "email": {
           "type": "string",
           "format": "email",
-          "description": "User's email address"
+          "maxLength": 150,
+          "description": "User email address"
         },
         "displayName": {
           "type": "string",
           "maxLength": 100,
-          "description": "User's full name or display name"
+          "description": "User display name"
         },
-        "role": {
-          "type": "string",
-          "enum": ["freelancer", "client"],
-          "description": "User role in ClientVault"
+        "starterSeeded": {
+          "type": "boolean",
+          "description": "Whether the starter journal entry was created for this user"
         },
         "createdAt": {
           "type": "string",
@@ -32,139 +32,78 @@
         "updatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Profile update timestamp"
+          "description": "Last profile update timestamp"
         }
       },
-      "required": ["id", "email", "displayName", "role", "createdAt", "updatedAt"]
+      "required": ["id", "email", "displayName", "createdAt", "updatedAt"]
     },
-    "ClientRecord": {
-      "title": "ClientRecord",
-      "description": "Client profile created by the freelancer to organize files",
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A user's private daily diary and personal reflection entry",
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique client ID"
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique journal entry ID"
         },
         "userId": {
           "type": "string",
-          "description": "Owner freelancer UID"
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner UID matching parent user document"
         },
-        "name": {
+        "date": {
           "type": "string",
-          "maxLength": 100,
-          "description": "Client name"
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "Entry calendar date in YYYY-MM-DD format"
         },
-        "email": {
+        "title": {
           "type": "string",
-          "format": "email",
-          "description": "Client contact email"
+          "minLength": 1,
+          "maxLength": 150,
+          "description": "Short entry title"
         },
-        "company": {
+        "mood": {
           "type": "string",
-          "maxLength": 100,
-          "description": "Client company name"
+          "enum": ["Happy", "Productive", "Stressed", "Chill", "Grateful", "Sad"],
+          "description": "Mood tag for the day"
         },
-        "status": {
+        "content": {
           "type": "string",
-          "enum": ["active", "archived"],
-          "description": "Client portal status"
+          "minLength": 1,
+          "maxLength": 10000,
+          "description": "Journal entry body text"
+        },
+        "isFavorite": {
+          "type": "boolean",
+          "description": "Whether the entry is starred as a favorite"
         },
         "createdAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Client creation timestamp"
+          "description": "Server timestamp when entry was created"
         },
         "updatedAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Last updated timestamp"
+          "description": "Server timestamp when entry was last edited"
         }
       },
-      "required": ["id", "userId", "name", "email", "status", "createdAt", "updatedAt"]
-    },
-    "VaultFile": {
-      "title": "VaultFile",
-      "description": "File record securely uploaded and managed in ClientVault",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique file ID"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Owner UID who owns this file space"
-        },
-        "name": {
-          "type": "string",
-          "maxLength": 255,
-          "description": "Original file name"
-        },
-        "size": {
-          "type": "number",
-          "description": "File size in bytes"
-        },
-        "type": {
-          "type": "string",
-          "maxLength": 100,
-          "description": "MIME type of the file"
-        },
-        "category": {
-          "type": "string",
-          "enum": ["design", "document", "asset", "contract", "feedback", "other"],
-          "description": "File category tag"
-        },
-        "clientName": {
-          "type": "string",
-          "maxLength": 100,
-          "description": "Associated client name or project"
-        },
-        "uploadedBy": {
-          "type": "string",
-          "maxLength": 100,
-          "description": "Name or email of uploader"
-        },
-        "uploadedByRole": {
-          "type": "string",
-          "enum": ["freelancer", "client"],
-          "description": "Role of uploader"
-        },
-        "downloadCount": {
-          "type": "number",
-          "description": "Number of times downloaded"
-        },
-        "notes": {
-          "type": "string",
-          "maxLength": 500,
-          "description": "Optional notes or instructions for this file"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Upload timestamp"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Last modification timestamp"
-        }
-      },
-      "required": ["id", "userId", "name", "size", "type", "category", "uploadedBy", "uploadedByRole", "createdAt", "updatedAt"]
+      "required": ["id", "userId", "date", "title", "mood", "content", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "User profile documents keyed by Auth UID"
+      "description": "Private user profile documents keyed by Auth UID"
     },
-    "/clients/{clientId}": {
-      "schema": "ClientRecord",
-      "description": "Client records owned by a freelancer user"
-    },
-    "/files/{fileId}": {
-      "schema": "VaultFile",
-      "description": "Secure file metadata records owned and managed by users"
+    "/users/{userId}/entries/{entryId}": {
+      "schema": "JournalEntry",
+      "description": "Private daily journal entries stored under each user's account"
     }
   }
 }
