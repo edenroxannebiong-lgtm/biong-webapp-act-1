@@ -9,7 +9,8 @@ import {
   Star,
   AlertTriangle,
 } from 'lucide-react';
-import { JournalEntry, MOOD_CONFIG, MOOD_TAGS, MoodTag } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import { getMoodConfig, JournalEntry, MOOD_TAGS, MoodTag } from '../types';
 import { formatShortDate } from '../services/journalService';
 import { MoodIcon } from './MoodIcon';
 
@@ -38,6 +39,9 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
   onDeleteEntry,
   onFocusEditor,
 }) => {
+  const { theme } = useTheme();
+  const moodConfig = getMoodConfig(theme);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [entryPendingDelete, setEntryPendingDelete] = useState<JournalEntry | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -112,10 +116,10 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
-          <h1 className="font-display text-2xl sm:text-3xl font-semibold text-[#3F2A32] tracking-tight">
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold text-[var(--text-primary)] tracking-tight">
             {showFavoritesOnly ? 'My Entries · Favorites' : 'My Entries'}
           </h1>
-          <span className="text-xs text-[#7B5A66] tabular-nums">
+          <span className="text-xs text-[var(--text-secondary)] tabular-nums">
             {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
           </span>
         </div>
@@ -130,8 +134,8 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
             }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
               selectedMoodFilter === 'all' && !showFavoritesOnly
-                ? 'bg-[#7B5A66] text-white'
-                : 'bg-[#FBF3F5] text-[#7B5A66] border border-[#F0C9D3] hover:text-[#3F2A32]'
+                ? 'bg-[var(--accent)] text-[var(--accent-text)] font-semibold'
+                : 'bg-[var(--bg-card)] text-[var(--text-secondary)] border border-[var(--border-primary)] hover:text-[var(--text-primary)]'
             }`}
           >
             All Moods
@@ -142,20 +146,22 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               showFavoritesOnly
-                ? 'bg-[#7B5A66] text-white'
-                : 'bg-[#FBF3F5] text-[#3F2A32] border border-[#F0C9D3] hover:bg-[#F0C9D3]/40'
+                ? 'bg-[var(--accent)] text-[var(--accent-text)] font-semibold'
+                : 'bg-[var(--bg-card)] text-[var(--text-primary)] border border-[var(--border-primary)] hover:bg-[var(--bg-surface-hover)]'
             }`}
           >
             <Star
-              className={`w-3 h-3 shrink-0 ${
-                showFavoritesOnly ? 'fill-white text-white' : 'fill-[#E59A3E] text-[#D98A2B]'
-              }`}
+              className="w-3 h-3 shrink-0"
+              style={{
+                fill: showFavoritesOnly ? 'currentColor' : 'var(--fill-fav)',
+                color: showFavoritesOnly ? 'currentColor' : 'var(--text-fav)',
+              }}
             />
             <span>Favorites</span>
           </button>
 
           {MOOD_TAGS.map((mood) => {
-            const cfg = MOOD_CONFIG[mood];
+            const cfg = moodConfig[mood];
             const isSelected = selectedMoodFilter === mood;
             return (
               <button
@@ -173,8 +179,8 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                 }
                 className={`px-3 py-1.5 rounded-lg text-xs border transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   isSelected
-                    ? 'ring-1 ring-[#3F2A32]/25 font-semibold'
-                    : 'bg-[#FBF3F5] text-[#3F2A32] border-[#F0C9D3] hover:bg-[#F0C9D3]/40 font-medium'
+                    ? 'ring-1 ring-[var(--text-primary)]/20 font-semibold'
+                    : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-primary)] hover:bg-[var(--bg-surface-hover)] font-medium'
                 }`}
               >
                 <span
@@ -193,19 +199,19 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
 
       {/* Search Bar */}
       <div className="relative">
-        <Search className="w-4 h-4 text-[#7B5A66] absolute left-3.5 top-1/2 -translate-y-1/2" />
+        <Search className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           placeholder="Search Entries by title, keyword, or date..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-16 py-2.5 text-sm rounded-xl border border-[#F0C9D3] bg-[#FBF3F5] text-[#3F2A32] placeholder-[#7B5A66]/70 focus:outline-none focus:ring-2 focus:ring-[#7B5A66] focus:border-[#7B5A66]"
+          className="w-full pl-10 pr-16 py-2.5 text-sm rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[#7B5A66] hover:text-[#3F2A32] flex items-center gap-1 cursor-pointer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
             <span>Clear</span>
@@ -219,32 +225,32 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
           {[1, 2].map((n) => (
             <div
               key={n}
-              className="bg-[#FBF3F5] rounded-2xl border border-[#F0C9D3] p-5 space-y-3 animate-pulse"
+              className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 space-y-3 animate-pulse"
             >
-              <div className="h-4 w-32 bg-[#F0C9D3]/60 rounded" />
-              <div className="h-5 w-64 bg-[#F0C9D3]/60 rounded" />
-              <div className="h-14 w-full bg-[#F0C9D3]/40 rounded" />
+              <div className="h-4 w-32 bg-[var(--border-primary)]/60 rounded" />
+              <div className="h-5 w-64 bg-[var(--border-primary)]/60 rounded" />
+              <div className="h-14 w-full bg-[var(--border-primary)]/40 rounded" />
             </div>
           ))}
         </div>
       ) : filteredEntries.length > 0 ? (
         <div className="space-y-3">
           {filteredEntries.map((entry) => {
-            const moodStyle = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.Chill;
+            const moodStyle = moodConfig[entry.mood] || moodConfig.Chill;
             const isFavorited = entry.isFavorite === true;
             const isTogglingFavorite = togglingFavoriteId === entry.id;
 
             return (
               <article
                 key={entry.id}
-                className="bg-[#FBF3F5] rounded-2xl border border-[#F0C9D3] p-5 sm:p-6 transition-colors hover:border-[#E0A0B2]"
+                className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 sm:p-6 transition-colors hover:border-[var(--border-strong)]"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-1.5 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <time
                         dateTime={entry.date}
-                        className="text-xs font-semibold text-[#7B5A66] tabular-nums"
+                        className="text-xs font-semibold text-[var(--text-secondary)] tabular-nums"
                       >
                         {formatShortDate(entry.date)}
                       </time>
@@ -263,7 +269,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                       </span>
                     </div>
 
-                    <h3 className="font-display text-lg font-semibold text-[#3F2A32] leading-snug">
+                    <h3 className="font-display text-lg font-semibold text-[var(--text-primary)] leading-snug">
                       {entry.title}
                     </h3>
                   </div>
@@ -277,16 +283,28 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                       aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
                       aria-pressed={isFavorited}
                       title={isFavorited ? 'Remove from favorites' : 'Mark as favorite'}
+                      style={
+                        isFavorited
+                          ? {
+                              backgroundColor: 'var(--bg-fav)',
+                              borderColor: 'var(--border-fav)',
+                              color: 'var(--text-fav)',
+                            }
+                          : undefined
+                      }
                       className={`p-1.5 rounded-lg border transition-colors cursor-pointer disabled:opacity-60 ${
                         isFavorited
-                          ? 'bg-[#FDF1DF] border-[#F2CFA0] text-[#D98A2B] hover:bg-[#FCE8C8]'
-                          : 'bg-transparent border-transparent text-[#7B5A66] hover:text-[#D98A2B] hover:bg-[#F6E6EA]'
+                          ? 'hover:brightness-95'
+                          : 'bg-transparent border-transparent text-[var(--text-secondary)] hover:text-[var(--text-fav)] hover:bg-[var(--bg-surface-hover)]'
                       }`}
                     >
                       <Star
-                        className={`w-4 h-4 transition-transform ${
-                          isFavorited ? 'fill-[#E59A3E] text-[#D98A2B]' : ''
-                        }`}
+                        className="w-4 h-4 transition-transform"
+                        style={
+                          isFavorited
+                            ? { fill: 'var(--fill-fav)', color: 'var(--text-fav)' }
+                            : undefined
+                        }
                       />
                     </button>
 
@@ -294,7 +312,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                       type="button"
                       onClick={() => onEditEntry(entry)}
                       title="Edit entry"
-                      className="px-2.5 py-1.5 text-xs font-medium text-[#7B5A66] hover:text-[#3F2A32] hover:bg-[#F6E6EA] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       <span>Edit</span>
@@ -303,7 +321,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                       type="button"
                       onClick={() => setEntryPendingDelete(entry)}
                       title="Delete entry"
-                      className="px-2.5 py-1.5 text-xs font-medium text-[#7B5A66] hover:text-[#7E2738] hover:bg-[#FCE8EC] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-error)] hover:bg-[var(--bg-error)] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Delete</span>
@@ -311,7 +329,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                   </div>
                 </div>
 
-                <p className="mt-3 text-sm text-[#3F2A32]/90 leading-relaxed whitespace-pre-wrap max-w-[75ch]">
+                <p className="mt-3 text-sm text-[var(--text-primary)]/90 leading-relaxed whitespace-pre-wrap max-w-[75ch]">
                   {entry.content}
                 </p>
               </article>
@@ -320,27 +338,27 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
         </div>
       ) : (
         /* Empty State */
-        <div className="bg-[#FBF3F5] rounded-2xl border border-[#F0C9D3] p-10 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-[#F6E6EA] border border-[#F0C9D3] text-[#7B5A66] mx-auto flex items-center justify-center mb-3">
+        <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-10 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-primary)] text-[var(--text-secondary)] mx-auto flex items-center justify-center mb-3">
             {showFavoritesOnly ? (
               <Star className="w-6 h-6" />
             ) : (
               <BookOpenText className="w-6 h-6" />
             )}
           </div>
-          <h3 className="font-display text-lg font-semibold text-[#3F2A32] mb-1">
+          <h3 className="font-display text-lg font-semibold text-[var(--text-primary)] mb-1">
             {showFavoritesOnly && !searchQuery && selectedMoodFilter === 'all'
               ? 'No favorite entries yet'
               : hasActiveFilter
               ? 'No matching entries found'
               : 'Your journal is ready'}
           </h3>
-          <p className="text-sm text-[#7B5A66] max-w-md mx-auto mb-5">
+          <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto mb-5">
             {showFavoritesOnly && !searchQuery && selectedMoodFilter === 'all'
               ? 'Tap the star icon on any journal entry to save your favorite moments here.'
               : hasActiveFilter
               ? 'Try another keyword or clear your active filters to see your saved reflections.'
-              : 'Capture a quiet moment, highlight, or thought from today using the editor above.'}
+              : 'Capture a quiet moment, highlight, or thought from today using the editor on your Dashboard.'}
           </p>
 
           {hasActiveFilter ? (
@@ -351,7 +369,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                 setSelectedMoodFilter('all');
                 setShowFavoritesOnly(false);
               }}
-              className="px-4 py-2 text-sm font-semibold text-white bg-[#7B5A66] hover:bg-[#654752] rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-sm font-semibold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-xl transition-colors cursor-pointer"
             >
               Clear Filters
             </button>
@@ -359,7 +377,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
             <button
               type="button"
               onClick={onFocusEditor}
-              className="px-4 py-2 text-sm font-semibold text-white bg-[#7B5A66] hover:bg-[#654752] rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 text-sm font-semibold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer"
             >
               <PenLine className="w-4 h-4" />
               <span>Write First Entry</span>
@@ -371,7 +389,8 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
       {/* Delete Confirmation Popup */}
       {entryPendingDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#3F2A32]/40 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs"
+          style={{ backgroundColor: 'var(--backdrop)' }}
           onClick={() => {
             if (!deletingId) setEntryPendingDelete(null);
           }}
@@ -380,31 +399,31 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-entry-dialog-title"
-            className="bg-[#FBF3F5] rounded-2xl border border-[#F0C9D3] shadow-xl max-w-md w-full p-6 space-y-4"
+            className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] shadow-xl max-w-md w-full p-6 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#FCE8EC] border border-[#EDBAC4] text-[#7E2738] flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[var(--bg-error)] border border-[var(--border-error)] text-[var(--text-error)] flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="space-y-1 min-w-0">
                 <h3
                   id="delete-entry-dialog-title"
-                  className="font-display text-lg font-semibold text-[#3F2A32]"
+                  className="font-display text-lg font-semibold text-[var(--text-primary)]"
                 >
                   Are you sure you want to delete this entry?
                 </h3>
-                <p className="text-xs text-[#7B5A66]">
+                <p className="text-xs text-[var(--text-secondary)]">
                   This reflection will be permanently removed from your Keepsake journal.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-xl bg-[#F6E6EA]/75 border border-[#F0C9D3] px-3.5 py-2.5">
-              <p className="text-xs font-semibold text-[#7B5A66] tabular-nums">
+            <div className="rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-primary)] px-3.5 py-2.5">
+              <p className="text-xs font-semibold text-[var(--text-secondary)] tabular-nums">
                 {formatShortDate(entryPendingDelete.date)}
               </p>
-              <p className="text-sm font-medium text-[#3F2A32] truncate mt-0.5">
+              <p className="text-sm font-medium text-[var(--text-primary)] truncate mt-0.5">
                 {entryPendingDelete.title}
               </p>
             </div>
@@ -414,7 +433,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                 type="button"
                 onClick={() => setEntryPendingDelete(null)}
                 disabled={Boolean(deletingId)}
-                className="px-4 py-2 text-sm font-medium text-[#7B5A66] hover:text-[#3F2A32] bg-white hover:bg-[#F6E6EA] border border-[#F0C9D3] rounded-xl transition-colors cursor-pointer disabled:opacity-60"
+                className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-primary)] rounded-xl transition-colors cursor-pointer disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -422,7 +441,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={Boolean(deletingId)}
-                className="px-4 py-2 text-sm font-semibold text-white bg-[#C85B70] hover:bg-[#A94458] rounded-xl transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                className="px-4 py-2 text-sm font-semibold text-white bg-[var(--bg-danger)] hover:bg-[var(--bg-danger-hover)] rounded-xl transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 {deletingId ? (
                   <>

@@ -55,6 +55,21 @@ service cloud.firestore {
              data.updatedAt is timestamp;
     }
 
+    // Validation Helper: Deadline
+    function isValidDeadline(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'dueDate', 'completed', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'userId', 'title', 'subject', 'dueDate', 'notes', 'completed', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+             (!('subject' in data) || (data.subject is string && data.subject.size() <= 100)) &&
+             data.dueDate is string && data.dueDate.size() == 10 && data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+             data.completed is bool &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
     // User Profiles Collection
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);
@@ -111,6 +126,42 @@ service cloud.firestore {
         allow delete: if isOwner(userId) &&
                          isValidId(userId) &&
                          isValidId(entryId) &&
+                         existing().userId == userId;
+      }
+
+      // Private Student Deadlines Subcollection
+      match /deadlines/{deadlineId} {
+        allow get: if isOwner(userId) &&
+                      isValidId(userId) &&
+                      isValidId(deadlineId) &&
+                      existing().userId == userId;
+
+        allow list: if isOwner(userId) &&
+                       resource.data.userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(deadlineId) &&
+                         isValidDeadline(incoming()) &&
+                         incoming().id == deadlineId &&
+                         incoming().userId == userId &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time;
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(deadlineId) &&
+                         isValidDeadline(incoming()) &&
+                         existing().userId == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().id == existing().id &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'subject', 'dueDate', 'notes', 'completed', 'updatedAt']);
+
+        allow delete: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(deadlineId) &&
                          existing().userId == userId;
       }
     }

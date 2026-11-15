@@ -1,10 +1,81 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light;
+  --bg-page: #F6E6EA;
+  --bg-card: #FBF3F5;
+  --bg-surface: #FFFFFF;
+  --bg-surface-hover: #F6E6EA;
+  --bg-subtle: #F6E6EA;
+  --bg-active-nav: rgba(240, 201, 211, 0.6);
+  --border-primary: #F0C9D3;
+  --border-strong: #E0A0B2;
+  --accent: #7B5A66;
+  --accent-hover: #654752;
+  --accent-text: #FFFFFF;
+  --text-primary: #3F2A32;
+  --text-secondary: #7B5A66;
+  --bg-error: #FCE8EC;
+  --border-error: #E0A0B2;
+  --text-error: #7E2738;
+  --bg-danger: #C85B70;
+  --bg-danger-hover: #A94458;
+  --bg-toast: #3F2A32;
+  --text-toast: #FBF3F5;
+  --border-toast: #7B5A66;
+  --bg-fav: #FDF1DF;
+  --border-fav: #F2CFA0;
+  --text-fav: #D98A2B;
+  --fill-fav: #E59A3E;
+  --bg-urgent: #FDE8E8;
+  --border-urgent: #EEB4B4;
+  --text-urgent: #9E1C1C;
+  --dot-urgent: #DC2626;
+  --dot-deadline: #7B5A66;
+  --backdrop: rgba(63, 42, 50, 0.4);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-page: #040B15;
+  --bg-card: #420001;
+  --bg-surface: #290001;
+  --bg-surface-hover: #570A0B;
+  --bg-subtle: #2E0001;
+  --bg-active-nav: #5C0A0B;
+  --border-primary: #640000;
+  --border-strong: #873232;
+  --accent: #B67E7D;
+  --accent-hover: #C89392;
+  --accent-text: #040B15;
+  --text-primary: #F3E3E2;
+  --text-secondary: #D4B2B1;
+  --bg-error: #5C1216;
+  --border-error: #9E3E3B;
+  --text-error: #FAD7D4;
+  --bg-danger: #B84A54;
+  --bg-danger-hover: #9C3A43;
+  --bg-toast: #420001;
+  --text-toast: #F3E3E2;
+  --border-toast: #B67E7D;
+  --bg-fav: #5E4614;
+  --border-fav: #8A6B26;
+  --text-fav: #FBECC4;
+  --fill-fav: #E5B85C;
+  --bg-urgent: #5E1518;
+  --border-urgent: #A33B3E;
+  --text-urgent: #FECACA;
+  --dot-urgent: #F87171;
+  --dot-deadline: #E6B3B2;
+  --backdrop: rgba(4, 11, 21, 0.72);
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: #F6E6EA;
-    color: #3F2A32;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    transition: background-color 180ms ease, color 180ms ease;
   }
 
   h1, h2, h3, .font-display {

@@ -111,6 +111,97 @@ export const MOOD_CONFIG: Record<MoodTag, MoodStyle> = {
   },
 };
 
+export const DARK_MOOD_CONFIG: Record<MoodTag, MoodStyle> = {
+  Happy: {
+    label: 'Happy',
+    dotColor: '#D4A84F',
+    dotBorder: '#9A782D',
+    barColor: '#C99B3E',
+    barBorder: '#8D6C26',
+    cellBg: '#5C4516',
+    cellBorder: '#8C6B25',
+    cellText: '#FBECC4',
+    badgeBg: '#5C4516',
+    badgeBorder: '#8C6B25',
+    badgeText: '#FBECC4',
+    description: 'Bright, joyful, and upbeat',
+  },
+  Productive: {
+    label: 'Productive',
+    dotColor: '#5DA670',
+    dotBorder: '#3C7A4D',
+    barColor: '#549C67',
+    barBorder: '#387548',
+    cellBg: '#1D4A29',
+    cellBorder: '#357445',
+    cellText: '#D4EED8',
+    badgeBg: '#1D4A29',
+    badgeBorder: '#357445',
+    badgeText: '#D4EED8',
+    description: 'Focused, accomplished, and energized',
+  },
+  Stressed: {
+    label: 'Stressed',
+    dotColor: '#C96A64',
+    dotBorder: '#9E3E3B',
+    barColor: '#BD5E58',
+    barBorder: '#913834',
+    cellBg: '#6B2220',
+    cellBorder: '#9C3E3B',
+    cellText: '#FAD7D4',
+    badgeBg: '#6B2220',
+    badgeBorder: '#9C3E3B',
+    badgeText: '#FAD7D4',
+    description: 'Overwhelmed, tense, or stretched thin',
+  },
+  Chill: {
+    label: 'Chill',
+    dotColor: '#6B9ED1',
+    dotBorder: '#3E6D9C',
+    barColor: '#6094C7',
+    barBorder: '#3A6794',
+    cellBg: '#1C4063',
+    cellBorder: '#376796',
+    cellText: '#D6E7F7',
+    badgeBg: '#1C4063',
+    badgeBorder: '#376796',
+    badgeText: '#D6E7F7',
+    description: 'Calm, rested, and unhurried',
+  },
+  Grateful: {
+    label: 'Grateful',
+    dotColor: '#A17EC9',
+    dotBorder: '#715199',
+    barColor: '#9672BE',
+    barBorder: '#69498F',
+    cellBg: '#442A61',
+    cellBorder: '#6D4A94',
+    cellText: '#EADDF7',
+    badgeBg: '#442A61',
+    badgeBorder: '#6D4A94',
+    badgeText: '#EADDF7',
+    description: 'Thankful, warm, and appreciative',
+  },
+  Sad: {
+    label: 'Sad',
+    dotColor: '#8693AA',
+    dotBorder: '#5B677D',
+    barColor: '#7C89A0',
+    barBorder: '#566278',
+    cellBg: '#323B4B',
+    cellBorder: '#546178',
+    cellText: '#E2E7F0',
+    badgeBg: '#323B4B',
+    badgeBorder: '#546178',
+    badgeText: '#E2E7F0',
+    description: 'Reflective, tender, or low-energy',
+  },
+};
+
+export function getMoodConfig(mode: 'light' | 'dark'): Record<MoodTag, MoodStyle> {
+  return mode === 'dark' ? DARK_MOOD_CONFIG : MOOD_CONFIG;
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -128,6 +219,18 @@ export interface JournalEntry {
   mood: MoodTag;
   content: string;
   isFavorite?: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface Deadline {
+  id: string;
+  userId: string;
+  title: string;
+  subject?: string;
+  dueDate: string; // YYYY-MM-DD
+  notes?: string;
+  completed: boolean;
   createdAt: any;
   updatedAt: any;
 }

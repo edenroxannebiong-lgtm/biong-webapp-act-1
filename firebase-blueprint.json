@@ -94,6 +94,63 @@
         }
       },
       "required": ["id", "userId", "date", "title", "mood", "content", "createdAt", "updatedAt"]
+    },
+    "Deadline": {
+      "title": "Deadline",
+      "description": "A student project or assignment deadline stored under a user's account",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique deadline ID"
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner UID matching parent user document"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "description": "Project or assignment title"
+        },
+        "subject": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Optional course or subject name"
+        },
+        "dueDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "Due date in YYYY-MM-DD format"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Optional requirements or reminders"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the deadline has been marked done"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when deadline was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when deadline was last updated"
+        }
+      },
+      "required": ["id", "userId", "title", "dueDate", "completed", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -104,6 +161,10 @@
     "/users/{userId}/entries/{entryId}": {
       "schema": "JournalEntry",
       "description": "Private daily journal entries stored under each user's account"
+    },
+    "/users/{userId}/deadlines/{deadlineId}": {
+      "schema": "Deadline",
+      "description": "Private student assignment and project deadlines stored under each user's account"
     }
   }
 }

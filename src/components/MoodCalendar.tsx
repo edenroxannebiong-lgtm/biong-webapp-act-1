@@ -1,7 +1,9 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { JournalEntry, MOOD_CONFIG, MOOD_TAGS } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import { Deadline, getMoodConfig, JournalEntry, MOOD_TAGS } from '../types';
 import { getTodayDateString } from '../services/journalService';
+import { getDeadlineDueInfo } from '../services/deadlineService';
 
 interface MoodCalendarProps {
   viewedMonth: Date;
@@ -9,6 +11,7 @@ interface MoodCalendarProps {
   selectedDate: string;
   onSelectDate: (dateStr: string) => void;
   entries: JournalEntry[];
+  deadlines: Deadline[];
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -19,7 +22,11 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
   selectedDate,
   onSelectDate,
   entries,
+  deadlines,
 }) => {
+  const { theme } = useTheme();
+  const moodConfig = getMoodConfig(theme);
+
   const year = viewedMonth.getFullYear();
   const month = viewedMonth.getMonth();
   const todayStr = getTodayDateString();
@@ -27,7 +34,6 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Map YYYY-MM-DD -> entries for that date
   const entriesByDate = React.useMemo(() => {
     const map = new Map<string, JournalEntry[]>();
     for (const entry of entries) {
@@ -37,6 +43,16 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
     }
     return map;
   }, [entries]);
+
+  const deadlinesByDate = React.useMemo(() => {
+    const map = new Map<string, Deadline[]>();
+    for (const deadline of deadlines) {
+      const existing = map.get(deadline.dueDate) || [];
+      existing.push(deadline);
+      map.set(deadline.dueDate, existing);
+    }
+    return map;
+  }, [deadlines]);
 
   const goToPrevMonth = () => {
     setViewedMonth(new Date(year, month - 1, 1));
@@ -57,7 +73,6 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
     year: 'numeric',
   });
 
-  // Build calendar grid slots
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDayOfMonth; i++) {
     cells.push(null);
@@ -69,18 +84,20 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
   return (
     <section
       aria-label="Mood calendar"
-      className="bg-[#FBF3F5] rounded-2xl border border-[#F0C9D3] p-5 sm:p-6 flex flex-col justify-between h-full"
+      className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 sm:p-6 flex flex-col justify-between transition-colors"
     >
       <div>
         {/* Calendar Header */}
         <div className="flex items-center justify-between gap-2 mb-5">
-          <h2 className="font-display text-lg font-semibold text-[#3F2A32]">{monthTitle}</h2>
+          <h2 className="font-display text-lg font-semibold text-[var(--text-primary)]">
+            {monthTitle}
+          </h2>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={goToToday}
-              className="px-2.5 py-1.5 text-xs font-medium text-[#7B5A66] hover:text-[#3F2A32] hover:bg-[#F6E6EA] rounded-lg border border-[#F0C9D3] transition-colors cursor-pointer whitespace-nowrap"
+              className="px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded-lg border border-[var(--border-primary)] transition-colors cursor-pointer whitespace-nowrap"
             >
               Today
             </button>
@@ -88,7 +105,7 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
               type="button"
               onClick={goToPrevMonth}
               aria-label="Previous month"
-              className="p-1.5 text-[#7B5A66] hover:text-[#3F2A32] hover:bg-[#F6E6EA] rounded-lg border border-[#F0C9D3] transition-colors cursor-pointer"
+              className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded-lg border border-[var(--border-primary)] transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -96,7 +113,7 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
               type="button"
               onClick={goToNextMonth}
               aria-label="Next month"
-              className="p-1.5 text-[#7B5A66] hover:text-[#3F2A32] hover:bg-[#F6E6EA] rounded-lg border border-[#F0C9D3] transition-colors cursor-pointer"
+              className="p-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] rounded-lg border border-[var(--border-primary)] transition-colors cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -106,7 +123,7 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
         {/* Weekday Row */}
         <div className="grid grid-cols-7 gap-1.5 mb-2 text-center">
           {WEEKDAYS.map((day) => (
-            <div key={day} className="text-xs font-semibold text-[#7B5A66] py-1">
+            <div key={day} className="text-xs font-semibold text-[var(--text-secondary)] py-1">
               {day}
             </div>
           ))}
@@ -123,24 +140,40 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
               dayNum
             ).padStart(2, '0')}`;
             const dayEntries = entriesByDate.get(dateStr) || [];
+            const dayDeadlines = deadlinesByDate.get(dateStr) || [];
             const primaryEntry = dayEntries[0];
             const isSelected = dateStr === selectedDate;
             const isToday = dateStr === todayStr;
-            const moodStyle = primaryEntry ? MOOD_CONFIG[primaryEntry.mood] : null;
+            const moodStyle = primaryEntry ? moodConfig[primaryEntry.mood] : null;
+            const hasUrgentDeadline = dayDeadlines.some(
+              (d) => getDeadlineDueInfo(d.dueDate, d.completed).isUrgent
+            );
+
+            const tooltipParts: string[] = [];
+            if (primaryEntry) {
+              tooltipParts.push(`${primaryEntry.title} (${primaryEntry.mood})`);
+            }
+            if (dayDeadlines.length > 0) {
+              tooltipParts.push(
+                `Due: ${dayDeadlines.map((d) => d.title).join(', ')}`
+              );
+            }
+            const tooltip =
+              tooltipParts.length > 0 ? `${dateStr}: ${tooltipParts.join(' · ')}` : dateStr;
 
             return (
               <button
                 key={dateStr}
                 type="button"
                 onClick={() => onSelectDate(dateStr)}
-                title={
-                  primaryEntry
-                    ? `${dateStr}: ${primaryEntry.title} (${primaryEntry.mood})`
-                    : dateStr
-                }
+                title={tooltip}
                 style={
                   isSelected
-                    ? { backgroundColor: '#7B5A66', color: '#FFFFFF', borderColor: '#7B5A66' }
+                    ? {
+                        backgroundColor: 'var(--accent)',
+                        color: 'var(--accent-text)',
+                        borderColor: 'var(--accent)',
+                      }
                     : moodStyle
                     ? {
                         backgroundColor: moodStyle.cellBg,
@@ -151,27 +184,44 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
                 }
                 className={`h-11 rounded-xl flex flex-col items-center justify-center relative transition-colors cursor-pointer border ${
                   isSelected
-                    ? 'ring-2 ring-[#3F2A32]/30 ring-offset-1 font-semibold'
+                    ? 'ring-2 ring-[var(--text-primary)]/25 ring-offset-1 ring-offset-[var(--bg-card)] font-semibold'
                     : isToday
-                    ? 'border-[#E0A0B2] ring-1 ring-[#E0A0B2] font-semibold hover:brightness-97'
+                    ? 'border-[var(--border-strong)] ring-1 ring-[var(--border-strong)] font-semibold hover:brightness-97'
                     : moodStyle
                     ? 'font-medium hover:brightness-97'
-                    : 'border-transparent text-[#3F2A32] hover:bg-[#F6E6EA]'
+                    : 'border-transparent text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
                 }`}
               >
+                {/* Deadline Indicator Dot */}
+                {dayDeadlines.length > 0 && (
+                  <span
+                    aria-label={`${dayDeadlines.length} deadline${dayDeadlines.length > 1 ? 's' : ''} due`}
+                    className="w-1.5 h-1.5 rounded-full absolute top-1.5 right-1.5 ring-1 ring-[var(--bg-card)]/70"
+                    style={{
+                      backgroundColor: isSelected
+                        ? 'var(--accent-text)'
+                        : hasUrgentDeadline
+                        ? 'var(--dot-urgent)'
+                        : 'var(--dot-deadline)',
+                    }}
+                  />
+                )}
+
                 <span className="text-xs tabular-nums leading-none">{dayNum}</span>
 
                 {/* Mood Indicator Dot(s) */}
                 {dayEntries.length > 0 && (
                   <span className="flex items-center gap-0.5 mt-1">
                     {dayEntries.slice(0, 3).map((entry) => {
-                      const entryMood = MOOD_CONFIG[entry.mood] || MOOD_CONFIG.Chill;
+                      const entryMood = moodConfig[entry.mood] || moodConfig.Chill;
                       return (
                         <span
                           key={entry.id}
                           className="w-1.5 h-1.5 rounded-full"
                           style={{
-                            backgroundColor: isSelected ? '#FFFFFF' : entryMood.cellText,
+                            backgroundColor: isSelected
+                              ? 'var(--accent-text)'
+                              : entryMood.cellText,
                           }}
                         />
                       );
@@ -184,20 +234,27 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
         </div>
       </div>
 
-      {/* Mood Color Legend */}
-      <div className="mt-5 pt-4 border-t border-[#F0C9D3] grid grid-cols-3 gap-x-3 gap-y-2 text-xs text-[#7B5A66]">
+      {/* Mood & Deadline Legend */}
+      <div className="mt-5 pt-4 border-t border-[var(--border-primary)] grid grid-cols-3 gap-x-3 gap-y-2 text-xs text-[var(--text-secondary)]">
         {MOOD_TAGS.map((mood) => (
           <div key={mood} className="flex items-center gap-1.5">
             <span
               className="w-2.5 h-2.5 rounded-full border shrink-0"
               style={{
-                backgroundColor: MOOD_CONFIG[mood].dotColor,
-                borderColor: MOOD_CONFIG[mood].dotBorder,
+                backgroundColor: moodConfig[mood].dotColor,
+                borderColor: moodConfig[mood].dotBorder,
               }}
             />
             <span>{mood}</span>
           </div>
         ))}
+        <div className="flex items-center gap-1.5 col-span-3 pt-1 border-t border-[var(--border-primary)]/60">
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: 'var(--dot-deadline)' }}
+          />
+          <span>Deadline due (red if due within 3 days)</span>
+        </div>
       </div>
     </section>
   );
