@@ -1,11 +1,29 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { BookHeart, CheckCircle2, Flame, Menu, PenLine, X } from 'lucide-react';
+import {
+  BookOpenText,
+  CalendarClock,
+  CalendarRange,
+  CheckCircle2,
+  Flame,
+  LayoutDashboard,
+  Menu,
+  PenLine,
+  X,
+} from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { db } from './firebase/config';
 import { handleFirestoreError, OperationType } from './firebase/errors';
-import { Deadline, JournalEntry, MoodTag } from './types';
+import {
+  DayOfWeek,
+  Deadline,
+  JournalEntry,
+  MoodTag,
+  ScheduleBlock,
+  ScheduleCategory,
+  ScheduleColor,
+} from './types';
 import {
   calculateWritingStreak,
   deleteJournalEntry,
@@ -19,6 +37,10 @@ import {
   saveDeadline,
   toggleDeadlineCompleted,
 } from './services/deadlineService';
+import {
+  deleteScheduleBlock,
+  saveScheduleBlock,
+} from './services/scheduleService';
 import { AuthPage } from './components/AuthPage';
 import { Sidebar } from './components/Sidebar';
 import { MoodCalendar } from './components/MoodCalendar';
@@ -27,7 +49,10 @@ import { EntriesFeed } from './components/EntriesFeed';
 import { RecentEntriesCard } from './components/RecentEntriesCard';
 import { UpcomingDeadlinesCard } from './components/UpcomingDeadlinesCard';
 import { DeadlinesPage } from './components/DeadlinesPage';
+import { TodaysScheduleCard } from './components/TodaysScheduleCard';
+import { SchedulePage } from './components/SchedulePage';
 import { ThemeToggle } from './components/ThemeToggle';
+import { ConfettiBurst, ConfettiTrigger } from './components/ConfettiBurst';
 
 function Dashboard() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -35,7 +60,9 @@ function Dashboard() {
   const [entriesLoading, setEntriesLoading] = useState(true);
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
   const [deadlinesLoading, setDeadlinesLoading] = useState(true);
-  const [activeView, setActiveView] = useState<'dashboard' | 'entries' | 'deadlines'>('dashboard');
+  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(true);
+  const [activeView, setActiveView] = useState<'dashboard' | 'entries' | 'deadlines' | 'schedule'>('dashboard');
   const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
   const [viewedMonth, setViewedMonth] = useState<Date>(() => {
     const now = new Date();
@@ -46,6 +73,7 @@ function Dashboard() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [confettiBurst, setConfettiBurst] = useState<ConfettiTrigger | null>(null);
 
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const seededUserRef = useRef<string | null>(null);
@@ -134,6 +162,41 @@ function Dashboard() {
         console.error('Error loading deadlines:', error);
         setDeadlinesLoading(false);
         handleFirestoreError(error, OperationType.LIST, deadlinesPath);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Subscribe to the signed-in user's private weekly schedule blocks
+  useEffect(() => {
+    if (!user) {
+      setScheduleBlocks([]);
+      setScheduleLoading(false);
+      return;
+    }
+
+    setScheduleLoading(true);
+    const schedulePath = `users/${user.uid}/schedule`;
+    const q = query(
+      collection(db, 'users', user.uid, 'schedule'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const loaded: ScheduleBlock[] = [];
+        snapshot.forEach((docSnap) => {
+          loaded.push({ ...(docSnap.data() as ScheduleBlock), id: docSnap.id });
+        });
+        setScheduleBlocks(loaded);
+        setScheduleLoading(false);
+      },
+      (error) => {
+        console.error('Error loading schedule blocks:', error);
+        setScheduleLoading(false);
+        handleFirestoreError(error, OperationType.LIST, schedulePath);
       }
     );
 
@@ -269,10 +332,20 @@ function Dashboard() {
     showToast(data.id ? 'Deadline updated.' : 'Deadline added.');
   };
 
-  const handleToggleDeadlineCompleted = async (deadline: Deadline) => {
+  const handleToggleDeadlineCompleted = async (
+    deadline: Deadline,
+    origin?: { x: number; y: number }
+  ) => {
     if (!user) return;
     const nextCompleted = !deadline.completed;
     await toggleDeadlineCompleted(user.uid, deadline.id, nextCompleted);
+    if (nextCompleted) {
+      setConfettiBurst({
+        id: Date.now(),
+        x: origin?.x,
+        y: origin?.y,
+      });
+    }
     showToast(nextCompleted ? 'Deadline marked as done.' : 'Deadline reopened.');
   };
 
@@ -280,6 +353,32 @@ function Dashboard() {
     if (!user) return;
     await deleteDeadline(user.uid, deadlineId);
     showToast('Deadline deleted.');
+  };
+
+  const handleOpenSchedule = () => {
+    setActiveView('schedule');
+    mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveScheduleBlock = async (data: {
+    id?: string;
+    title: string;
+    category: ScheduleCategory;
+    dayOfWeek: DayOfWeek;
+    startTime: string;
+    endTime: string;
+    location?: string;
+    color: ScheduleColor;
+  }) => {
+    if (!user) return;
+    await saveScheduleBlock(user.uid, data);
+    showToast(data.id ? 'Schedule block updated.' : 'Added to your schedule.');
+  };
+
+  const handleDeleteScheduleBlock = async (blockId: string) => {
+    if (!user) return;
+    await deleteScheduleBlock(user.uid, blockId);
+    showToast('Schedule block deleted.');
   };
 
   const upcomingDeadlinesCount = useMemo(
@@ -309,13 +408,74 @@ function Dashboard() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-page)] flex items-center justify-center p-6">
-        <div className="text-center space-y-3">
-          <div className="w-11 h-11 rounded-2xl bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center mx-auto">
-            <BookHeart className="w-6 h-6" />
+      <div
+        aria-label="Loading Keepsake"
+        className="flex h-screen bg-[var(--bg-page)] overflow-hidden transition-colors"
+      >
+        {/* Desktop Sidebar Skeleton */}
+        <div className="hidden md:flex w-72 bg-[var(--bg-card)] border-r border-[var(--border-primary)] p-5 flex-col justify-between shrink-0">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-[var(--border-primary)]">
+              <div className="w-9 h-9 rounded-xl shimmer-box shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <div className="h-4 w-24 rounded-md shimmer-box" />
+                <div className="h-3 w-36 rounded-md shimmer-box" />
+              </div>
+            </div>
+            <div className="h-10 w-full rounded-xl shimmer-box" />
+            <div className="space-y-2">
+              <div className="h-9 w-full rounded-lg shimmer-box" />
+              <div className="h-9 w-full rounded-lg shimmer-box" />
+              <div className="h-9 w-full rounded-lg shimmer-box" />
+            </div>
+            <div className="h-48 w-full rounded-xl shimmer-box" />
           </div>
-          <div className="w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-[var(--text-secondary)] font-medium">Opening Keepsake...</p>
+          <div className="h-10 w-full rounded-xl shimmer-box" />
+        </div>
+
+        {/* Main Area Skeleton */}
+        <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+          <div className="h-14 md:h-16 bg-[var(--bg-card)] border-b border-[var(--border-primary)] px-4 sm:px-8 flex items-center justify-between shrink-0">
+            <div className="h-4 w-36 rounded-md shimmer-box" />
+            <div className="h-8 w-24 rounded-lg shimmer-box" />
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5 sm:p-8">
+            <div className="max-w-6xl mx-auto space-y-6">
+              <div className="space-y-2">
+                <div className="h-8 w-64 rounded-lg shimmer-box" />
+                <div className="h-4 w-80 max-w-full rounded-md shimmer-box" />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-5 space-y-6">
+                  <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6 space-y-4">
+                    <div className="h-6 w-36 rounded-lg shimmer-box" />
+                    <div className="grid grid-cols-7 gap-1.5">
+                      {Array.from({ length: 35 }).map((_, idx) => (
+                        <div key={idx} className="h-11 rounded-xl shimmer-box" />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6 space-y-3">
+                    <div className="h-5 w-40 rounded-md shimmer-box" />
+                    <div className="h-14 w-full rounded-xl shimmer-box" />
+                    <div className="h-14 w-full rounded-xl shimmer-box" />
+                  </div>
+                </div>
+                <div className="lg:col-span-7 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-6 space-y-5">
+                  <div className="h-7 w-52 rounded-lg shimmer-box" />
+                  <div className="h-10 w-full rounded-xl shimmer-box" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                      <div key={idx} className="h-9 rounded-xl shimmer-box" />
+                    ))}
+                  </div>
+                  <div className="h-44 w-full rounded-xl shimmer-box" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -327,12 +487,15 @@ function Dashboard() {
 
   return (
     <div className="flex h-screen bg-[var(--bg-page)] overflow-hidden text-[var(--text-primary)] transition-colors">
+      {/* Blush Pink & Mauve Confetti Burst */}
+      <ConfettiBurst trigger={confettiBurst} />
+
       {/* Toast Notification */}
       {toastMessage && (
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 bg-[var(--bg-toast)] text-[var(--text-toast)] px-4 py-2.5 rounded-xl shadow-md border border-[var(--border-toast)] flex items-center gap-2.5 text-xs font-medium"
+          className="fixed bottom-20 md:bottom-5 right-4 sm:right-5 z-50 bg-[var(--bg-toast)] text-[var(--text-toast)] px-4 py-2.5 rounded-xl shadow-md border border-[var(--border-toast)] flex items-center gap-2.5 text-xs font-medium"
         >
           <CheckCircle2 className="w-4 h-4 text-[var(--accent)] shrink-0" />
           <span>{toastMessage}</span>
@@ -366,6 +529,7 @@ function Dashboard() {
               }}
               entries={entries}
               deadlines={deadlines}
+              scheduleBlocks={scheduleBlocks}
               streakCount={streakCount}
               viewedMonth={viewedMonth}
               onWriteToday={handleWriteToday}
@@ -393,6 +557,7 @@ function Dashboard() {
           setShowFavoritesOnly={setShowFavoritesOnly}
           entries={entries}
           deadlines={deadlines}
+          scheduleBlocks={scheduleBlocks}
           streakCount={streakCount}
           viewedMonth={viewedMonth}
           onWriteToday={handleWriteToday}
@@ -402,7 +567,7 @@ function Dashboard() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Top Header */}
-        <header className="h-16 bg-[var(--bg-card)] border-b border-[var(--border-primary)] px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-colors">
+        <header className="h-14 md:h-16 bg-[var(--bg-card)] border-b border-[var(--border-primary)] px-4 sm:px-8 flex items-center justify-between gap-3 shrink-0 transition-colors">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -421,7 +586,9 @@ function Dashboard() {
                   ? 'Dashboard'
                   : activeView === 'entries'
                   ? 'My Entries'
-                  : 'Deadlines'}
+                  : activeView === 'deadlines'
+                  ? 'Deadlines'
+                  : 'Schedule'}
               </span>
             </div>
           </div>
@@ -437,7 +604,7 @@ function Dashboard() {
             <button
               type="button"
               onClick={handleWriteToday}
-              className="px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              className="hidden md:flex px-3.5 py-1.5 text-xs font-semibold text-[var(--accent-text)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg transition-colors items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <PenLine className="w-3.5 h-3.5" />
               <span>Write Today</span>
@@ -445,50 +612,8 @@ function Dashboard() {
           </div>
         </header>
 
-        {/* Mobile Page Switcher Tabs */}
-        <nav
-          aria-label="Mobile page navigation"
-          className="md:hidden bg-[var(--bg-card)] border-b border-[var(--border-primary)] px-5 py-2 flex items-center gap-2 shrink-0 transition-colors"
-        >
-          <button
-            type="button"
-            onClick={() => setActiveView('dashboard')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-center transition-colors cursor-pointer whitespace-nowrap ${
-              activeView === 'dashboard'
-                ? 'bg-[var(--accent)] text-[var(--accent-text)]'
-                : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-primary)]'
-            }`}
-          >
-            Dashboard
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('entries')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-center transition-colors cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 ${
-              activeView === 'entries'
-                ? 'bg-[var(--accent)] text-[var(--accent-text)]'
-                : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-primary)]'
-            }`}
-          >
-            <span>My Entries</span>
-            <span className="tabular-nums opacity-85">({entries.length})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView('deadlines')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold text-center transition-colors cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 ${
-              activeView === 'deadlines'
-                ? 'bg-[var(--accent)] text-[var(--accent-text)]'
-                : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-primary)]'
-            }`}
-          >
-            <span>Deadlines</span>
-            <span className="tabular-nums opacity-85">({upcomingDeadlinesCount})</span>
-          </button>
-        </nav>
-
         {/* Scrollable Workspace */}
-        <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-5 sm:p-8">
+        <main ref={mainScrollRef} className="flex-1 overflow-y-auto p-5 pb-24 sm:p-8 sm:pb-24 md:pb-8">
           <div className="max-w-6xl mx-auto space-y-6">
             {activeView === 'dashboard' ? (
               <>
@@ -514,12 +639,19 @@ function Dashboard() {
                       onSelectDate={handleSelectDate}
                       entries={entries}
                       deadlines={deadlines}
+                      loading={entriesLoading || deadlinesLoading}
                     />
                     <UpcomingDeadlinesCard
                       deadlines={deadlines}
                       loading={deadlinesLoading}
                       onToggleCompleted={handleToggleDeadlineCompleted}
                       onViewAll={handleOpenDeadlines}
+                    />
+                    <TodaysScheduleCard
+                      selectedDate={selectedDate}
+                      scheduleBlocks={scheduleBlocks}
+                      loading={scheduleLoading}
+                      onViewAll={handleOpenSchedule}
                     />
                   </div>
                   <div className="lg:col-span-7">
@@ -531,6 +663,7 @@ function Dashboard() {
                       onStartNewEntry={() => setEditingEntry(null)}
                       onSaveEntry={handleSaveEntry}
                       onCancelEdit={() => setEditingEntry(null)}
+                      loading={entriesLoading}
                     />
                   </div>
                 </div>
@@ -556,7 +689,7 @@ function Dashboard() {
                 onDeleteEntry={handleDeleteEntry}
                 onFocusEditor={handleWriteToday}
               />
-            ) : (
+            ) : activeView === 'deadlines' ? (
               <DeadlinesPage
                 deadlines={deadlines}
                 loading={deadlinesLoading}
@@ -564,9 +697,115 @@ function Dashboard() {
                 onToggleCompleted={handleToggleDeadlineCompleted}
                 onDeleteDeadline={handleDeleteDeadline}
               />
+            ) : (
+              <SchedulePage
+                scheduleBlocks={scheduleBlocks}
+                loading={scheduleLoading}
+                onSaveBlock={handleSaveScheduleBlock}
+                onDeleteBlock={handleDeleteScheduleBlock}
+              />
             )}
           </div>
         </main>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <nav
+          aria-label="Mobile navigation"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--bg-card)]/95 backdrop-blur-md border-t border-[var(--border-primary)] px-2 pb-[env(safe-area-inset-bottom)] transition-colors"
+        >
+          <div className="grid grid-cols-5 items-center h-16 max-w-lg mx-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('dashboard');
+                mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-colors cursor-pointer ${
+                activeView === 'dashboard'
+                  ? 'text-[var(--text-primary)] font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <LayoutDashboard
+                className="w-5 h-5 shrink-0"
+                style={activeView === 'dashboard' ? { color: 'var(--accent)' } : undefined}
+              />
+              <span className="text-[10px] leading-none whitespace-nowrap">Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('entries');
+                mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-colors cursor-pointer ${
+                activeView === 'entries'
+                  ? 'text-[var(--text-primary)] font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <BookOpenText
+                className="w-5 h-5 shrink-0"
+                style={activeView === 'entries' ? { color: 'var(--accent)' } : undefined}
+              />
+              <span className="text-[10px] leading-none whitespace-nowrap">My Entries</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleWriteToday}
+              aria-label="Write Today's Entry"
+              title="Write Today's Entry"
+              className="min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl cursor-pointer group"
+            >
+              <span className="w-11 h-7 rounded-xl bg-[var(--accent)] group-hover:bg-[var(--accent-hover)] text-[var(--accent-text)] flex items-center justify-center shadow-xs transition-colors">
+                <PenLine className="w-4 h-4 shrink-0" />
+              </span>
+              <span className="text-[10px] font-semibold text-[var(--text-primary)] leading-none whitespace-nowrap">
+                Write Today
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('deadlines');
+                mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-colors cursor-pointer ${
+                activeView === 'deadlines'
+                  ? 'text-[var(--text-primary)] font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <CalendarClock
+                className="w-5 h-5 shrink-0"
+                style={activeView === 'deadlines' ? { color: 'var(--accent)' } : undefined}
+              />
+              <span className="text-[10px] leading-none whitespace-nowrap">Deadlines</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveView('schedule');
+                mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`min-h-[44px] flex flex-col items-center justify-center gap-1 rounded-xl transition-colors cursor-pointer ${
+                activeView === 'schedule'
+                  ? 'text-[var(--text-primary)] font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <CalendarRange
+                className="w-5 h-5 shrink-0"
+                style={activeView === 'schedule' ? { color: 'var(--accent)' } : undefined}
+              />
+              <span className="text-[10px] leading-none whitespace-nowrap">Schedule</span>
+            </button>
+          </div>
+        </nav>
       </div>
     </div>
   );

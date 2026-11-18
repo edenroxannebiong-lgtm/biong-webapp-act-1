@@ -205,7 +205,7 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
           placeholder="Search Entries by title, keyword, or date..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-16 py-2.5 text-sm rounded-xl border border-[var(--border-primary)] bg-[var(--bg-card)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
+          className="w-full pl-10 pr-16 py-2.5 text-sm rounded-xl border border-[var(--border-primary)] bg-[var(--bg-surface)] text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)]"
         />
         {searchQuery && (
           <button
@@ -222,14 +222,17 @@ export const EntriesFeed: React.FC<EntriesFeedProps> = ({
       {/* Entries List */}
       {loading ? (
         <div className="space-y-3">
-          {[1, 2].map((n) => (
+          {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 space-y-3 animate-pulse"
+              className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 sm:p-6 space-y-3"
             >
-              <div className="h-4 w-32 bg-[var(--border-primary)]/60 rounded" />
-              <div className="h-5 w-64 bg-[var(--border-primary)]/60 rounded" />
-              <div className="h-14 w-full bg-[var(--border-primary)]/40 rounded" />
+              <div className="flex items-center gap-2.5">
+                <div className="h-3.5 w-24 rounded-md shimmer-box" />
+                <div className="h-5 w-20 rounded-full shimmer-box" />
+              </div>
+              <div className="h-5 w-56 rounded-md shimmer-box" />
+              <div className="h-14 w-full rounded-xl shimmer-box" />
             </div>
           ))}
         </div>

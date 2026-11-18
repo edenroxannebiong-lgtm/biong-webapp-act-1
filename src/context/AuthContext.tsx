@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
+  FacebookAuthProvider,
   signInWithPopup,
   updateProfile,
 } from 'firebase/auth';
@@ -20,6 +21,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithFacebook: () => Promise<void>;
   signOutUser: () => Promise<void>;
 }
 
@@ -119,6 +121,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithFacebook = async () => {
+    setLoading(true);
+    try {
+      const provider = new FacebookAuthProvider();
+      provider.addScope('email');
+      await signInWithPopup(auth, provider);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOutUser = async () => {
     setLoading(true);
     try {
@@ -138,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
+        signInWithFacebook,
         signOutUser,
       }}
     >

@@ -12,6 +12,7 @@ interface MoodCalendarProps {
   onSelectDate: (dateStr: string) => void;
   entries: JournalEntry[];
   deadlines: Deadline[];
+  loading?: boolean;
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -23,6 +24,7 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
   onSelectDate,
   entries,
   deadlines,
+  loading = false,
 }) => {
   const { theme } = useTheme();
   const moodConfig = getMoodConfig(theme);
@@ -79,6 +81,44 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
   }
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push(d);
+  }
+
+  if (loading) {
+    return (
+      <section
+        aria-label="Loading mood calendar"
+        className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 sm:p-6 flex flex-col justify-between transition-colors"
+      >
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-5">
+            <div className="h-6 w-36 rounded-lg shimmer-box" />
+            <div className="flex items-center gap-1.5">
+              <div className="h-7 w-14 rounded-lg shimmer-box" />
+              <div className="h-7 w-7 rounded-lg shimmer-box" />
+              <div className="h-7 w-7 rounded-lg shimmer-box" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5 mb-2">
+            {WEEKDAYS.map((day) => (
+              <div key={day} className="h-5 mx-1.5 rounded-md shimmer-box" />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1.5">
+            {Array.from({ length: 35 }).map((_, idx) => (
+              <div key={idx} className="h-11 rounded-xl shimmer-box" />
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-[var(--border-primary)] grid grid-cols-3 gap-x-3 gap-y-2">
+          {MOOD_TAGS.map((mood) => (
+            <div key={mood} className="h-3.5 w-20 rounded-md shimmer-box" />
+          ))}
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -202,6 +242,8 @@ export const MoodCalendar: React.FC<MoodCalendarProps> = ({
                         ? 'var(--accent-text)'
                         : hasUrgentDeadline
                         ? 'var(--dot-urgent)'
+                        : moodStyle
+                        ? moodStyle.cellText
                         : 'var(--dot-deadline)',
                     }}
                   />

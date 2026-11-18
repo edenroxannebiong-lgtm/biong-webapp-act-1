@@ -32,42 +32,46 @@
   --text-urgent: #9E1C1C;
   --dot-urgent: #DC2626;
   --dot-deadline: #7B5A66;
+  --shimmer-base: #F6E6EA;
+  --shimmer-highlight: #F0C9D3;
   --backdrop: rgba(63, 42, 50, 0.4);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg-page: #040B15;
-  --bg-card: #420001;
-  --bg-surface: #290001;
-  --bg-surface-hover: #570A0B;
-  --bg-subtle: #2E0001;
-  --bg-active-nav: #5C0A0B;
-  --border-primary: #640000;
-  --border-strong: #873232;
-  --accent: #B67E7D;
-  --accent-hover: #C89392;
-  --accent-text: #040B15;
-  --text-primary: #F3E3E2;
-  --text-secondary: #D4B2B1;
-  --bg-error: #5C1216;
-  --border-error: #9E3E3B;
-  --text-error: #FAD7D4;
-  --bg-danger: #B84A54;
-  --bg-danger-hover: #9C3A43;
-  --bg-toast: #420001;
-  --text-toast: #F3E3E2;
-  --border-toast: #B67E7D;
-  --bg-fav: #5E4614;
-  --border-fav: #8A6B26;
-  --text-fav: #FBECC4;
-  --fill-fav: #E5B85C;
-  --bg-urgent: #5E1518;
-  --border-urgent: #A33B3E;
-  --text-urgent: #FECACA;
-  --dot-urgent: #F87171;
-  --dot-deadline: #E6B3B2;
-  --backdrop: rgba(4, 11, 21, 0.72);
+  --bg-page: #121212;
+  --bg-card: #1A1A1D;
+  --bg-surface: #251C20;
+  --bg-surface-hover: #32242A;
+  --bg-subtle: #161415;
+  --bg-active-nav: rgba(216, 167, 177, 0.18);
+  --border-primary: #3B2830;
+  --border-strong: #583B47;
+  --accent: #D8A7B1;
+  --accent-hover: #E3BAC2;
+  --accent-text: #121212;
+  --text-primary: #FFF1E6;
+  --text-secondary: #A67C74;
+  --bg-error: #3B1E24;
+  --border-error: #8C4A56;
+  --text-error: #FADADD;
+  --bg-danger: #C85B70;
+  --bg-danger-hover: #AD465A;
+  --bg-toast: #1A1A1D;
+  --text-toast: #FFF1E6;
+  --border-toast: #D8A7B1;
+  --bg-fav: #332520;
+  --border-fav: #A67C74;
+  --text-fav: #FBC4AB;
+  --fill-fav: #FBC4AB;
+  --bg-urgent: #451B22;
+  --border-urgent: #A65260;
+  --text-urgent: #FADADD;
+  --dot-urgent: #E05263;
+  --dot-deadline: #F8C8DC;
+  --shimmer-base: #251C20;
+  --shimmer-highlight: #3B2830;
+  --backdrop: rgba(18, 18, 18, 0.78);
 }
 
 @layer base {
@@ -85,4 +89,31 @@
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+@keyframes keepsake-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer-box {
+  background: linear-gradient(
+    105deg,
+    var(--shimmer-base) 25%,
+    var(--shimmer-highlight) 50%,
+    var(--shimmer-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: keepsake-shimmer 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-box {
+    animation: none;
+    background: var(--shimmer-base);
+  }
 }

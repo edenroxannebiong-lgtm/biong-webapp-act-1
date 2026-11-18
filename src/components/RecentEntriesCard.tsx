@@ -64,10 +64,11 @@ export const RecentEntriesCard: React.FC<RecentEntriesCardProps> = ({
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-primary)] p-4 space-y-2.5 animate-pulse"
+              className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-primary)] p-4 space-y-2.5"
             >
-              <div className="h-3.5 w-24 bg-[var(--border-primary)]/60 rounded" />
-              <div className="h-4 w-3/4 bg-[var(--border-primary)]/60 rounded" />
+              <div className="h-3.5 w-24 rounded-md shimmer-box" />
+              <div className="h-4 w-3/4 rounded-md shimmer-box" />
+              <div className="h-5 w-20 rounded-full shimmer-box" />
             </div>
           ))}
         </div>

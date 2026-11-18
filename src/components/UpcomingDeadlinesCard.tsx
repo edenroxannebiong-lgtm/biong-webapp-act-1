@@ -6,7 +6,10 @@ import { getDeadlineDueInfo } from '../services/deadlineService';
 interface UpcomingDeadlinesCardProps {
   deadlines: Deadline[];
   loading: boolean;
-  onToggleCompleted: (deadline: Deadline) => Promise<void>;
+  onToggleCompleted: (
+    deadline: Deadline,
+    origin?: { x: number; y: number }
+  ) => Promise<void>;
   onViewAll: () => void;
 }
 
@@ -37,11 +40,19 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({
     [deadlines]
   );
 
-  const handleToggle = async (deadline: Deadline) => {
+  const handleToggle = async (
+    deadline: Deadline,
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
     if (togglingId === deadline.id) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const origin = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
     setTogglingId(deadline.id);
     try {
-      await onToggleCompleted(deadline);
+      await onToggleCompleted(deadline, origin);
     } finally {
       setTogglingId(null);
     }
@@ -76,13 +87,16 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({
 
       {loading ? (
         <div className="space-y-2.5">
-          {[1, 2].map((n) => (
+          {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-primary)] p-3.5 space-y-2 animate-pulse"
+              className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-primary)] p-3.5 space-y-2"
             >
-              <div className="h-4 w-2/3 bg-[var(--border-primary)]/60 rounded" />
-              <div className="h-3 w-1/3 bg-[var(--border-primary)]/40 rounded" />
+              <div className="h-4 w-2/3 rounded-md shimmer-box" />
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-16 rounded-md shimmer-box" />
+                <div className="h-4 w-24 rounded-full shimmer-box" />
+              </div>
             </div>
           ))}
         </div>
@@ -108,7 +122,7 @@ export const UpcomingDeadlinesCard: React.FC<UpcomingDeadlinesCardProps> = ({
                   aria-checked={deadline.completed}
                   aria-label={`Mark "${deadline.title}" as done`}
                   disabled={isToggling}
-                  onClick={() => handleToggle(deadline)}
+                  onClick={(e) => handleToggle(deadline, e)}
                   className="mt-0.5 w-4 h-4 rounded border border-[var(--border-strong)] bg-[var(--bg-card)] hover:border-[var(--accent)] flex items-center justify-center transition-colors shrink-0 cursor-pointer disabled:opacity-60"
                 >
                   {isToggling && <Check className="w-3 h-3 text-[var(--accent)]" />}

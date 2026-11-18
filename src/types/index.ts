@@ -114,86 +114,86 @@ export const MOOD_CONFIG: Record<MoodTag, MoodStyle> = {
 export const DARK_MOOD_CONFIG: Record<MoodTag, MoodStyle> = {
   Happy: {
     label: 'Happy',
-    dotColor: '#D4A84F',
-    dotBorder: '#9A782D',
-    barColor: '#C99B3E',
-    barBorder: '#8D6C26',
-    cellBg: '#5C4516',
-    cellBorder: '#8C6B25',
-    cellText: '#FBECC4',
-    badgeBg: '#5C4516',
-    badgeBorder: '#8C6B25',
-    badgeText: '#FBECC4',
+    dotColor: '#FADADD',
+    dotBorder: '#D8A7B1',
+    barColor: '#FADADD',
+    barBorder: '#D8A7B1',
+    cellBg: '#FADADD',
+    cellBorder: '#D8A7B1',
+    cellText: '#1A1A1D',
+    badgeBg: '#FADADD',
+    badgeBorder: '#D8A7B1',
+    badgeText: '#1A1A1D',
     description: 'Bright, joyful, and upbeat',
   },
   Productive: {
     label: 'Productive',
-    dotColor: '#5DA670',
-    dotBorder: '#3C7A4D',
-    barColor: '#549C67',
-    barBorder: '#387548',
-    cellBg: '#1D4A29',
-    cellBorder: '#357445',
-    cellText: '#D4EED8',
-    badgeBg: '#1D4A29',
-    badgeBorder: '#357445',
-    badgeText: '#D4EED8',
+    dotColor: '#FBC4AB',
+    dotBorder: '#D49A7F',
+    barColor: '#FBC4AB',
+    barBorder: '#D49A7F',
+    cellBg: '#FBC4AB',
+    cellBorder: '#D49A7F',
+    cellText: '#1A1A1D',
+    badgeBg: '#FBC4AB',
+    badgeBorder: '#D49A7F',
+    badgeText: '#1A1A1D',
     description: 'Focused, accomplished, and energized',
   },
   Stressed: {
     label: 'Stressed',
-    dotColor: '#C96A64',
-    dotBorder: '#9E3E3B',
-    barColor: '#BD5E58',
-    barBorder: '#913834',
-    cellBg: '#6B2220',
-    cellBorder: '#9C3E3B',
-    cellText: '#FAD7D4',
-    badgeBg: '#6B2220',
-    badgeBorder: '#9C3E3B',
-    badgeText: '#FAD7D4',
+    dotColor: '#BC8F8F',
+    dotBorder: '#9A6D6D',
+    barColor: '#BC8F8F',
+    barBorder: '#9A6D6D',
+    cellBg: '#BC8F8F',
+    cellBorder: '#9A6D6D',
+    cellText: '#121212',
+    badgeBg: '#BC8F8F',
+    badgeBorder: '#9A6D6D',
+    badgeText: '#121212',
     description: 'Overwhelmed, tense, or stretched thin',
   },
   Chill: {
     label: 'Chill',
-    dotColor: '#6B9ED1',
-    dotBorder: '#3E6D9C',
-    barColor: '#6094C7',
-    barBorder: '#3A6794',
-    cellBg: '#1C4063',
-    cellBorder: '#376796',
-    cellText: '#D6E7F7',
-    badgeBg: '#1C4063',
-    badgeBorder: '#376796',
-    badgeText: '#D6E7F7',
+    dotColor: '#F8C8DC',
+    dotBorder: '#D49FB5',
+    barColor: '#F8C8DC',
+    barBorder: '#D49FB5',
+    cellBg: '#F8C8DC',
+    cellBorder: '#D49FB5',
+    cellText: '#1A1A1D',
+    badgeBg: '#F8C8DC',
+    badgeBorder: '#D49FB5',
+    badgeText: '#1A1A1D',
     description: 'Calm, rested, and unhurried',
   },
   Grateful: {
     label: 'Grateful',
-    dotColor: '#A17EC9',
-    dotBorder: '#715199',
-    barColor: '#9672BE',
-    barBorder: '#69498F',
-    cellBg: '#442A61',
-    cellBorder: '#6D4A94',
-    cellText: '#EADDF7',
-    badgeBg: '#442A61',
-    badgeBorder: '#6D4A94',
-    badgeText: '#EADDF7',
+    dotColor: '#D8A7B1',
+    dotBorder: '#B37F8A',
+    barColor: '#D8A7B1',
+    barBorder: '#B37F8A',
+    cellBg: '#D8A7B1',
+    cellBorder: '#B37F8A',
+    cellText: '#121212',
+    badgeBg: '#D8A7B1',
+    badgeBorder: '#B37F8A',
+    badgeText: '#121212',
     description: 'Thankful, warm, and appreciative',
   },
   Sad: {
     label: 'Sad',
-    dotColor: '#8693AA',
-    dotBorder: '#5B677D',
-    barColor: '#7C89A0',
-    barBorder: '#566278',
-    cellBg: '#323B4B',
-    cellBorder: '#546178',
-    cellText: '#E2E7F0',
-    badgeBg: '#323B4B',
-    badgeBorder: '#546178',
-    badgeText: '#E2E7F0',
+    dotColor: '#A67C74',
+    dotBorder: '#855F58',
+    barColor: '#A67C74',
+    barBorder: '#855F58',
+    cellBg: '#A67C74',
+    cellBorder: '#855F58',
+    cellText: '#121212',
+    badgeBg: '#A67C74',
+    badgeBorder: '#855F58',
+    badgeText: '#121212',
     description: 'Reflective, tender, or low-energy',
   },
 };
@@ -234,3 +234,54 @@ export interface Deadline {
   createdAt: any;
   updatedAt: any;
 }
+
+export type ScheduleCategory = 'Class' | 'Study';
+
+export type DayOfWeek =
+  | 'Monday'
+  | 'Tuesday'
+  | 'Wednesday'
+  | 'Thursday'
+  | 'Friday'
+  | 'Saturday'
+  | 'Sunday';
+
+export const DAYS_OF_WEEK: DayOfWeek[] = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+export type ScheduleColor = '#D8A7B1' | '#FBC4AB' | '#FADADD' | '#F8C8DC' | '#BC8F8F';
+
+export const SCHEDULE_COLORS: {
+  hex: ScheduleColor;
+  label: string;
+  border: string;
+  text: string;
+}[] = [
+  { hex: '#D8A7B1', label: 'Dusty Rose', border: '#B5828C', text: '#1A1A1D' },
+  { hex: '#FBC4AB', label: 'Warm Peach', border: '#D49A7F', text: '#1A1A1D' },
+  { hex: '#FADADD', label: 'Blush Petal', border: '#D9A7B2', text: '#1A1A1D' },
+  { hex: '#F8C8DC', label: 'Soft Pink', border: '#D49FB5', text: '#1A1A1D' },
+  { hex: '#BC8F8F', label: 'Rosy Taupe', border: '#9A6D6D', text: '#121212' },
+];
+
+export interface ScheduleBlock {
+  id: string;
+  userId: string;
+  title: string;
+  category: ScheduleCategory;
+  dayOfWeek: DayOfWeek;
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
+  location?: string;
+  color: ScheduleColor;
+  createdAt: any;
+  updatedAt: any;
+}
+

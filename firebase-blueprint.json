@@ -151,6 +151,76 @@
         }
       },
       "required": ["id", "userId", "title", "dueDate", "completed", "createdAt", "updatedAt"]
+    },
+    "ScheduleBlock": {
+      "title": "ScheduleBlock",
+      "description": "A weekly class or study timetable block stored under a user's account",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique schedule block ID"
+        },
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner UID matching parent user document"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 150,
+          "description": "Class or study session title"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Class", "Study"],
+          "description": "Whether the block is a class or study session"
+        },
+        "dayOfWeek": {
+          "type": "string",
+          "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "description": "Day of the week for this recurring timetable block"
+        },
+        "startTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+          "description": "Start time in 24-hour HH:MM format"
+        },
+        "endTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+          "description": "End time in 24-hour HH:MM format"
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Optional classroom, building, or study location"
+        },
+        "color": {
+          "type": "string",
+          "enum": ["#D8A7B1", "#FBC4AB", "#FADADD", "#F8C8DC", "#BC8F8F"],
+          "description": "Soft pastel color code for the schedule block"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when block was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when block was last updated"
+        }
+      },
+      "required": ["id", "userId", "title", "category", "dayOfWeek", "startTime", "endTime", "color", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -165,6 +235,10 @@
     "/users/{userId}/deadlines/{deadlineId}": {
       "schema": "Deadline",
       "description": "Private student assignment and project deadlines stored under each user's account"
+    },
+    "/users/{userId}/schedule/{blockId}": {
+      "schema": "ScheduleBlock",
+      "description": "Private weekly class and study schedule blocks stored under each user's account"
     }
   }
 }

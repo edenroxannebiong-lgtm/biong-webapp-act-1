@@ -23,7 +23,10 @@ interface DeadlinesPageProps {
     dueDate: string;
     notes?: string;
   }) => Promise<void>;
-  onToggleCompleted: (deadline: Deadline) => Promise<void>;
+  onToggleCompleted: (
+    deadline: Deadline,
+    origin?: { x: number; y: number }
+  ) => Promise<void>;
   onDeleteDeadline: (deadlineId: string) => Promise<void>;
 }
 
@@ -114,11 +117,19 @@ export const DeadlinesPage: React.FC<DeadlinesPageProps> = ({
     }
   };
 
-  const handleToggle = async (deadline: Deadline) => {
+  const handleToggle = async (
+    deadline: Deadline,
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
     if (togglingId === deadline.id) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const origin = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
     setTogglingId(deadline.id);
     try {
-      await onToggleCompleted(deadline);
+      await onToggleCompleted(deadline, origin);
     } finally {
       setTogglingId(null);
     }
@@ -358,13 +369,17 @@ export const DeadlinesPage: React.FC<DeadlinesPageProps> = ({
       {/* Deadlines List */}
       {loading ? (
         <div className="space-y-3">
-          {[1, 2].map((n) => (
+          {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 space-y-2.5 animate-pulse"
+              className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-4 sm:p-5 space-y-2.5"
             >
-              <div className="h-4 w-48 bg-[var(--border-primary)]/60 rounded" />
-              <div className="h-3.5 w-32 bg-[var(--border-primary)]/40 rounded" />
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-md shimmer-box shrink-0" />
+                <div className="h-5 w-48 rounded-md shimmer-box" />
+                <div className="h-5 w-24 rounded-full shimmer-box" />
+              </div>
+              <div className="h-4 w-2/3 ml-8 rounded-md shimmer-box" />
             </div>
           ))}
         </div>
@@ -399,7 +414,7 @@ export const DeadlinesPage: React.FC<DeadlinesPageProps> = ({
                           : `Mark "${deadline.title}" as done`
                       }
                       disabled={isToggling}
-                      onClick={() => handleToggle(deadline)}
+                      onClick={(e) => handleToggle(deadline, e)}
                       className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 cursor-pointer disabled:opacity-60 ${
                         deadline.completed
                           ? 'bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-text)]'

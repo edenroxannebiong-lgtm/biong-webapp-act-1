@@ -70,6 +70,23 @@ service cloud.firestore {
              data.updatedAt is timestamp;
     }
 
+    // Validation Helper: ScheduleBlock
+    function isValidScheduleBlock(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'category', 'dayOfWeek', 'startTime', 'endTime', 'color', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'userId', 'title', 'category', 'dayOfWeek', 'startTime', 'endTime', 'location', 'color', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+             data.category in ['Class', 'Study'] &&
+             data.dayOfWeek in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] &&
+             data.startTime is string && data.startTime.size() == 5 && data.startTime.matches('^[0-2][0-9]:[0-5][0-9]$') &&
+             data.endTime is string && data.endTime.size() == 5 && data.endTime.matches('^[0-2][0-9]:[0-5][0-9]$') &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+             data.color in ['#D8A7B1', '#FBC4AB', '#FADADD', '#F8C8DC', '#BC8F8F'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
     // User Profiles Collection
     match /users/{userId} {
       allow get: if isOwner(userId) && isValidId(userId);
@@ -162,6 +179,42 @@ service cloud.firestore {
         allow delete: if isOwner(userId) &&
                          isValidId(userId) &&
                          isValidId(deadlineId) &&
+                         existing().userId == userId;
+      }
+
+      // Private Weekly Schedule Blocks Subcollection
+      match /schedule/{blockId} {
+        allow get: if isOwner(userId) &&
+                      isValidId(userId) &&
+                      isValidId(blockId) &&
+                      existing().userId == userId;
+
+        allow list: if isOwner(userId) &&
+                       resource.data.userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(blockId) &&
+                         isValidScheduleBlock(incoming()) &&
+                         incoming().id == blockId &&
+                         incoming().userId == userId &&
+                         incoming().createdAt == request.time &&
+                         incoming().updatedAt == request.time;
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(blockId) &&
+                         isValidScheduleBlock(incoming()) &&
+                         existing().userId == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().id == existing().id &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt == request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'dayOfWeek', 'startTime', 'endTime', 'location', 'color', 'updatedAt']);
+
+        allow delete: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(blockId) &&
                          existing().userId == userId;
       }
     }

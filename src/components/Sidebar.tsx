@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   BookOpenText,
   CalendarClock,
+  CalendarRange,
   Flame,
   LogOut,
   PenLine,
@@ -11,18 +12,26 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Deadline, getMoodConfig, JournalEntry, MOOD_TAGS, MoodTag } from '../types';
+import {
+  Deadline,
+  getMoodConfig,
+  JournalEntry,
+  MOOD_TAGS,
+  MoodTag,
+  ScheduleBlock,
+} from '../types';
 import { MoodIcon } from './MoodIcon';
 
 interface SidebarProps {
-  activeView: 'dashboard' | 'entries' | 'deadlines';
-  setActiveView: (view: 'dashboard' | 'entries' | 'deadlines') => void;
+  activeView: 'dashboard' | 'entries' | 'deadlines' | 'schedule';
+  setActiveView: (view: 'dashboard' | 'entries' | 'deadlines' | 'schedule') => void;
   selectedMoodFilter: 'all' | MoodTag;
   setSelectedMoodFilter: (mood: 'all' | MoodTag) => void;
   showFavoritesOnly: boolean;
   setShowFavoritesOnly: (show: boolean) => void;
   entries: JournalEntry[];
   deadlines: Deadline[];
+  scheduleBlocks: ScheduleBlock[];
   streakCount: number;
   viewedMonth: Date;
   onWriteToday: () => void;
@@ -37,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setShowFavoritesOnly,
   entries,
   deadlines,
+  scheduleBlocks,
   streakCount,
   viewedMonth,
   onWriteToday,
@@ -159,6 +169,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <span className="text-xs text-[var(--text-secondary)] tabular-nums">
               {upcomingDeadlinesCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('schedule')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer whitespace-nowrap ${
+              activeView === 'schedule'
+                ? 'bg-[var(--bg-active-nav)] text-[var(--text-primary)] font-semibold'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <CalendarRange className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
+              <span>Schedule</span>
+            </div>
+            <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+              {scheduleBlocks.length}
             </span>
           </button>
         </nav>

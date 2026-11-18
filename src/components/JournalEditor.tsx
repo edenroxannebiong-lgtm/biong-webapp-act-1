@@ -19,6 +19,7 @@ interface JournalEditorProps {
     content: string;
   }) => Promise<void>;
   onCancelEdit: () => void;
+  loading?: boolean;
 }
 
 export const JournalEditor: React.FC<JournalEditorProps> = ({
@@ -29,6 +30,7 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
   onStartNewEntry,
   onSaveEntry,
   onCancelEdit,
+  loading = false,
 }) => {
   const { theme } = useTheme();
   const moodConfig = getMoodConfig(theme);
@@ -87,6 +89,46 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <section
+        aria-label="Loading journal editor"
+        className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-primary)] p-5 sm:p-6 flex flex-col justify-between h-full transition-colors"
+      >
+        <div className="space-y-5">
+          <div className="pb-4 border-b border-[var(--border-primary)] space-y-2">
+            <div className="h-3.5 w-44 rounded-md shimmer-box" />
+            <div className="h-7 w-56 rounded-lg shimmer-box" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="h-3.5 w-16 rounded-md shimmer-box" />
+            <div className="h-10 w-full rounded-xl shimmer-box" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="h-3.5 w-20 rounded-md shimmer-box" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {MOOD_TAGS.map((tag) => (
+                <div key={tag} className="h-9 rounded-xl shimmer-box" />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="h-3.5 w-40 rounded-md shimmer-box" />
+            <div className="h-40 w-full rounded-xl shimmer-box" />
+          </div>
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-[var(--border-primary)] flex items-center justify-between gap-3">
+          <div className="h-3.5 w-44 rounded-md shimmer-box" />
+          <div className="h-9 w-28 rounded-xl shimmer-box" />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -258,7 +300,7 @@ export const JournalEditor: React.FC<JournalEditorProps> = ({
               type="button"
               onClick={onCancelEdit}
               disabled={saving}
-              className="px-3.5 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-primary)] rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              className="px-3.5 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-primary)] rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <X className="w-4 h-4" />
               <span>Cancel</span>
